@@ -54,7 +54,7 @@ mkdir -p ./inference_workdir/
 # prepare environment variables for container
 ANALYSIS_TIME=$(format_analysis_time "${ANALYSIS_TIME}")
 DINI_ZARR="s3://harmonie-zarr/dini/control/${ANALYSIS_TIME}/single_levels.zarr/"
-DATASTORE_INPUT_PATHS="danra_model1_config.danra_surface=${DINI_ZARR},danra_model1_config.danra_static=${DINI_ZARR}"
+DATASTORE_INPUT_PATHS="danra_model1_config.danra_sl_state=${DINI_ZARR},danra_model1_config.danra_static=${DINI_ZARR}"
 TIME_DIMENSIONS="time"
 INFERENCE_WORKDIR="$(pwd)/inference_workdir/"
 

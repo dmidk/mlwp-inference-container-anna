@@ -68,9 +68,14 @@ MODEL_TIMESTEP_HOURS=3
 
 # set default override of input paths in the datastore config used for creating the
 # inference dataset if environment variable isn't set
+
+# DATASTORE_INPUT_PATHS=${DATASTORE_INPUT_PATHS:-"\
+# danra.danra_surface=https://object-store.os-api.cci1.ecmwf.int/danra/v0.6.0dev1/single_levels.zarr/,\
+# danra.danra_static=https://object-store.os-api.cci1.ecmwf.int/danra/v0.5.0/single_levels.zarr/"}
 DATASTORE_INPUT_PATHS=${DATASTORE_INPUT_PATHS:-"\
-danra.danra_surface=https://object-store.os-api.cci1.ecmwf.int/danra/v0.6.0dev1/single_levels.zarr/,\
+danra.danra_sl_state=https://object-store.os-api.cci1.ecmwf.int/danra/v0.6.0dev1/single_levels.zarr/,\
 danra.danra_static=https://object-store.os-api.cci1.ecmwf.int/danra/v0.5.0/single_levels.zarr/"}
+
 TIME_DIMENSIONS=${TIME_DIMENSIONS:-"analysis_time,elapsed_forecast_duration"}
 ANALYSIS_TIME=${ANALYSIS_TIME:-"2019-02-04T12:00"}  # assumed to be in UTC
 # default forecast duration of 18 hours
