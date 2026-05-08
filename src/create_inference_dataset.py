@@ -2,7 +2,7 @@ import copy
 import datetime
 import os
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Optional
 
 import isodate
 import mllam_data_prep as mdp
@@ -14,8 +14,7 @@ from neural_lam.config import DatastoreSelection, NeuralLAMConfig
 
 FP_TRAINING_CONFIG = "inference_artifact/configs/config.yaml"
 DATASTORE_INPUT_PATH_FORMAT = "{datastore_name}.{input_name}={input_path}"
-
-
+DATASTORE_RENAME_VARIABLES_ITEM_FORMAT = "{datastore_name}:{from_name}:{to_name}"
 def _parse_datastore_input_paths(s: str) -> Dict[str, Dict[str, str]]:
     """
     Parse a comma-separated list of {datastore_name}.{input_name}={input_path}
@@ -54,6 +53,51 @@ def _parse_datastore_input_paths(s: str) -> Dict[str, Dict[str, str]]:
     return result
 
 
+def _parse_datastore_rename_variables(s: str) -> Dict[str, Dict[str, str]]:
+    """
+    Parse a comma-separated list of {datastore_name}:{from_name}:{to_name}
+    into a dictionary of dictionaries.
+
+    Parameters
+    ----------
+    s : str
+        The string to parse.
+
+    Returns
+    -------
+    Dict[str, Dict[str, str]]
+        A dictionary of dictionaries where keys are datastore names and values
+        are mappings from variable names in the config to variable names in the
+        input dataset.
+    """
+    result = {}
+    if not s.strip():
+        return result
+
+    for item in s.split(","):
+        parts = parse.parse(DATASTORE_RENAME_VARIABLES_ITEM_FORMAT, item)
+        if parts is None:
+            raise ValueError(
+                f"Invalid format for DATASTORE_RENAME_VARIABLES item: {item}. "
+                f"Expected format is {DATASTORE_RENAME_VARIABLES_ITEM_FORMAT}"
+            )
+
+        datastore_name = parts["datastore_name"]
+        from_name = parts["from_name"]
+        to_name = parts["to_name"]
+
+        if datastore_name not in result:
+            result[datastore_name] = {}
+        elif from_name in result[datastore_name]:
+            raise ValueError(
+                f"Duplicate rename rule for variable {from_name} in datastore "
+                f"{datastore_name} in DATASTORE_RENAME_VARIABLES"
+            )
+        result[datastore_name][from_name] = to_name
+
+    return result
+
+
 REQUIRED_ENV_VARS = {
     # comma-separated list of {datastore_name}:{input_name}={input_path}
     "DATASTORE_INPUT_PATHS": _parse_datastore_input_paths,
@@ -67,6 +111,13 @@ REQUIRED_ENV_VARS = {
     # inference working directory, relative to where inference config and
     # datasets are saved
     "INFERENCE_WORKDIR": str,
+}
+
+OPTIONAL_ENV_VARS = {
+    # comma-separated list of {datastore_name}:{from_name}:{to_name}, where
+    # from_name is the variable in the config and to_name is the variable in
+    # the input dataset.
+    "DATASTORE_RENAME_VARIABLES": _parse_datastore_rename_variables,
 }
 
 
@@ -88,7 +139,77 @@ def _parse_env_vars() -> Dict[str, any]:
             env_vars[var] = parser(value)
         except Exception as e:
             raise ValueError(f"Error parsing environment variable {var}: {e}")
+
+    for var, parser in OPTIONAL_ENV_VARS.items():
+        value = os.getenv(var)
+        if value is None:
+            env_vars[var] = {}
+            continue
+        try:
+            env_vars[var] = parser(value)
+        except Exception as e:
+            raise ValueError(f"Error parsing environment variable {var}: {e}")
+
     return env_vars
+
+
+def _rename_input_variables_for_datastore(
+    config: mdp.Config,
+    datastore_name: str,
+    rename_variables: Dict[str, Dict[str, str]],
+) -> None:
+    """
+    Apply variable rename rules to all inputs in a datastore config.
+
+    Parameters
+    ----------
+    config : mdp.Config
+        The datastore config to update.
+    datastore_name : str
+        The name of the datastore for selecting rename rules.
+    rename_variables : Dict[str, Dict[str, str]]
+        Mapping of datastore_name to {from_name: to_name}.
+    """
+    datastore_renames = rename_variables.get(datastore_name, {})
+    if len(datastore_renames) == 0:
+        return
+
+    did_rename = False
+    available_variables = set()
+    for input_name in config.inputs.keys():
+        input_config = config.inputs[input_name]
+        if not hasattr(input_config, "variables") or input_config.variables is None:
+            continue
+
+        if isinstance(input_config.variables, dict):
+            renamed_variables = {}
+            variable_iterable = input_config.variables.items()
+        else:
+            renamed_variables = []
+            variable_iterable = ((variable, None) for variable in input_config.variables)
+
+        for variable, variable_config in variable_iterable:
+            available_variables.add(variable)
+            renamed_variable = datastore_renames.get(variable, variable)
+            if renamed_variable != variable:
+                did_rename = True
+                logger.info(
+                    f"Renaming variable for datastore {datastore_name}: "
+                    f"{variable} -> {renamed_variable} (input: {input_name})"
+                )
+            if isinstance(renamed_variables, dict):
+                renamed_variables[renamed_variable] = variable_config
+            else:
+                renamed_variables.append(renamed_variable)
+
+        input_config.variables = renamed_variables
+
+    if not did_rename:
+        raise ValueError(
+            f"DATASTORE_RENAME_VARIABLES for datastore {datastore_name} did not "
+            f"match any configured variables. Available variables are: "
+            f"{sorted(available_variables)}"
+        )
 
 
 def _create_inference_datastore_config(
@@ -251,6 +372,8 @@ def _prepare_inference_dataset_zarr(
     analysis_time: datetime.datetime,
     forecast_duration: datetime.timedelta,
     time_dimensions: list[str],
+    rename_variables: Dict[str, Dict[str, str]],
+    drop_time_inputs: Optional[Dict[str, set[str]]] = None,
 ) -> str:
     """
     Prepare the inference dataset for a single datastore.
@@ -311,6 +434,11 @@ def _prepare_inference_dataset_zarr(
         overwrite_input_paths=datastore_input_paths,
         time_dimensions=time_dimensions,
     )
+    _rename_input_variables_for_datastore(
+        config=inference_config,
+        datastore_name=datastore_name,
+        rename_variables=rename_variables,
+    )
 
     fp_inference_datastore_config = (
         f"{fp_inference_workdir}/{datastore_name}.datastore.yaml"
@@ -341,6 +469,7 @@ def _prepare_all_inference_dataset_zarr(
     datastore_input_paths: Dict[str, Dict[str, str]],
     fp_inference_workdir: str,
     time_dimensions: list[str],
+    rename_variables: Dict[str, Dict[str, str]],
 ) -> str:
     """
     Prepare the inference dataset.
@@ -379,6 +508,7 @@ def _prepare_all_inference_dataset_zarr(
             analysis_time=analysis_time,
             forecast_duration=forecast_duration,
             time_dimensions=time_dimensions,
+            rename_variables=rename_variables,
         )
 
         fps_datastore_configs[datastore_name] = fp_training_datastore_config
@@ -467,6 +597,7 @@ def main():
         datastore_input_paths=env_vars["DATASTORE_INPUT_PATHS"],
         fp_inference_workdir=env_vars["INFERENCE_WORKDIR"],
         time_dimensions=env_vars["TIME_DIMENSIONS"],
+        rename_variables=env_vars["DATASTORE_RENAME_VARIABLES"],
     )
     _create_inference_config(
         fps_inference_datastore_config=fps_inference_datastore_config,

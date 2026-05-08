@@ -72,6 +72,8 @@ MODEL_TIMESTEP_HOURS=3
 # DATASTORE_INPUT_PATHS=${DATASTORE_INPUT_PATHS:-"\
 # danra.danra_surface=https://object-store.os-api.cci1.ecmwf.int/danra/v0.6.0dev1/single_levels.zarr/,\
 # danra.danra_static=https://object-store.os-api.cci1.ecmwf.int/danra/v0.5.0/single_levels.zarr/"}
+
+# Overwrite paths to use DANRA under development
 DATASTORE_INPUT_PATHS=${DATASTORE_INPUT_PATHS:-"\
 danra.danra_sl_state=https://object-store.os-api.cci1.ecmwf.int/danra/v0.6.0dev1/single_levels.zarr/,\
 danra.danra_static=https://object-store.os-api.cci1.ecmwf.int/danra/v0.5.0/single_levels.zarr/"}
