@@ -71,8 +71,14 @@ DATASTORE_RENAME_VARIABLES="${DATASTORE_RENAME_VARIABLES:-}"
 TIME_DIMENSIONS="time"
 INFERENCE_WORKDIR="$(pwd)/inference_workdir/"
 
+if [ "${CONTAINER_APP}" = "docker" ] ; then
+    GPU_ARGS=(--gpus all)
+else
+    GPU_ARGS=(--device nvidia.com/gpu=all)
+fi
+
 ${CONTAINER_APP} run --rm \
-    --device nvidia.com/gpu=all \
+    "${GPU_ARGS[@]}" \
     --shm-size=32g \
     -v ${INFERENCE_WORKDIR}:/workspace/inference_workdir:Z \
     -v $(pwd)/src:/workspace/src:Z \
@@ -81,4 +87,4 @@ ${CONTAINER_APP} run --rm \
     -e TIME_DIMENSIONS="${TIME_DIMENSIONS}" \
     -e ANALYSIS_TIME="${ANALYSIS_TIME}" \
     -e FORECAST_DURATION="${FORECAST_DURATION}" \
-    localhost/anna:latest
+    anna:latest
