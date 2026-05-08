@@ -8,28 +8,30 @@ The ANNA artifact is "s3://mlwm-artifacts/inference-artifacts/gefion-1.zip", whi
 ## Running inference
 `AWS_ACCESS_KEY_ID=<access_key> AWS_SECRET_ACCESS_KEY=<secret_access_key> ./run_inference_container.sh 2026-02-04T00:00:00Z`
 
+You can get an interactive debugger to launch on exceptions with passing `MLWM_DEBUGGER=ipdb` as an environment variable. This will launch `ipdb` at the point of exception, allowing you to inspect variables and the stack trace.
+
 
 ## Training cli args
 
 ```yaml
 - datastore:
-  - config_path: /dcai/projects/cu_0003/user_space/hinkas/git-repos/ablation-studies/configs/danra_model1/7deg_config.yaml 
-- num_workers: 6 
-- precision: bf16-mixed 
+  - config_path: /dcai/projects/cu_0003/user_space/hinkas/git-repos/ablation-studies/configs/danra_model1/7deg_config.yaml
+- num_workers: 6
+- precision: bf16-mixed
 - batch_size: 1
-- hidden_dim: 300 
-- hidden_dim_grid: 150 
-- time_delta_enc_dim: 32 
-- config_path: /dcai/projects/cu_0003/user_space/hinkas/git-repos/ablation-studies/configs/danra_model1/7deg_config.yaml 
-- model: hi_lam 
-- processor_layers: 2 
-- graph_name: 7deg_rect_hi3 
-- num_nodes: 2 
+- hidden_dim: 300
+- hidden_dim_grid: 150
+- time_delta_enc_dim: 32
+- config_path: /dcai/projects/cu_0003/user_space/hinkas/git-repos/ablation-studies/configs/danra_model1/7deg_config.yaml
+- model: hi_lam
+- processor_layers: 2
+- graph_name: 7deg_rect_hi3
+- num_nodes: 2
 - epochs: 80
 - ar_steps_train: 1
-- lr: 0.001 
-- min_lr: 0.001 
-- val_interval: 5 
+- lr: 0.001
+- min_lr: 0.001
+- val_interval: 5
 - ar_steps_eval: 4
 - val_steps_to_log: 1 2 4
 ```
