@@ -3,6 +3,9 @@
 # This script runs the inference container using initial conditions from DINI
 # stored on AWS
 
+# Container application (defuault to podman if not set)
+CONTAINER_APP=${CONTAINER_APP:-podman}
+
 # The script takes only one argument: the analysis time to use for inference,
 # in ISO8601 format (e.g. 2025-11-05T090000Z). If "Z" is omitted, UTC is
 # assumed. An optional second argument can be provided to specify the forecast
@@ -68,7 +71,7 @@ DATASTORE_RENAME_VARIABLES="${DATASTORE_RENAME_VARIABLES:-}"
 TIME_DIMENSIONS="time"
 INFERENCE_WORKDIR="$(pwd)/inference_workdir/"
 
-podman run --rm \
+${CONTAINER_APP} run --rm \
     --device nvidia.com/gpu=all \
     --shm-size=32g \
     -v ${INFERENCE_WORKDIR}:/workspace/inference_workdir:Z \
