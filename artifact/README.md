@@ -18,12 +18,57 @@ The code is in the `anna_inference.artifact` package
 
 | Module / file | What |
 |---|---|
-| `assemble` | builds the package from the inputs below |
+| `layout` | the artifact layout (from the `model.yaml` config chain) and `check_artifact()` |
+| `collect` | collects the artifact **on the training machine**, for a newly trained model (below) |
+| `assemble` | builds the package for the paper's model from the inputs below (reconstruction) |
 | `era5_boundary_stats` | exact ERA5 boundary training statistics from WeatherBench2 |
 | `check_checkpoint_compat` | strict checkpoint load and one-step forecast on synthetic data with the package's configs |
 | `zenodo_draft` | uploads the package zip as a Zenodo **draft** (never publishes) |
 | `sanitize_checkpoint` | loads/cleans the gefion-1 checkpoint (see [gefion-1](#gefion-1-a-prior-incorrect-inference-artifact)) |
 | `artifact/provenance/` (scripts) | tools used to collect what the package records (below) |
+
+## Collecting the artifact on the training machine
+
+This is how an artifact should be made, for example for a newly trained or
+fine-tuned version of the model. Run `collect` on the machine it was trained
+on, where the training datastores (the mllam-data-prep zarr next to each
+datastore config) still exist:
+
+```bash
+uv run python -m anna_inference.artifact.collect \
+    --nl-config <training neural-lam config, e.g. 7deg_config.yaml> \
+    --checkpoint <checkpoint.ckpt> \
+    --artifact-name <name> [--zip]
+```
+
+From the training setup it collects:
+- the neural-lam config and the datastore configs;
+- the statistics (`stats/`) and the boundary stats datastore for
+  `overload_stats_path`;
+- the grids (`grids/`): the interior grid and statics, unstacked from the
+  interior datastore, and the boundary points;
+- the checkpoint.
+
+The model description (`model.yaml`) and the DINI/IFS configs come from
+[`../configs/`](../configs/); update `model.yaml` first if the training
+arguments or graph changed. A checkpoint whose md5 differs from `model.yaml`'s
+is recorded with its md5 and no download URL.
+
+It writes `artifact/build/<name>/` (with the checkpoint) and, with `--zip`,
+the zip without the checkpoint for publishing. The layout is the same as
+`assemble` produces.
+
+Checked on real mllam-data-prep datastores (an inference workdir standing in
+for the training machine): the interior grid (x, y, lat, lon, lsm,
+orography) and the DANRA and ERA5 statistics are identical to the
+reconstructed artifact's. The boundary grid holds the same 18,014 points.
+
+`collect` is ported from `mlwm.build_inference_artifact` of
+[mlwm-deployment](https://github.com/leifdenby/mlwm-deployment). That module
+collected the checkpoint, the configs and the statistics, but no grids, no
+stats datastore and no model description (it had `training_cli_args.yaml`
+instead). Its missing boundary support is why ANNA's artifact had to be
+reconstructed.
 
 ## The model
 
