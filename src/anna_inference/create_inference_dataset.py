@@ -50,7 +50,6 @@ import numpy as np
 import xarray as xr
 import yaml
 from loguru import logger
-
 from model_configs import TRAINING_BOUNDARY_SOURCE, model_configs
 
 # boundary sources ANNA can be run with operationally (configs/model.yaml
