@@ -17,8 +17,9 @@ COPY scripts/entry.sh ./entry.sh
 RUN python -c 'import torch; print(f"torch=={torch.__version__}")' > constraints.txt
 # install with constraints
 RUN uv pip install --break-system-packages --system --constraints constraints.txt .
-# check that we can print out neural-lam version
-RUN python -c 'import neural_lam; print(f"neural-lam=={neural_lam.__version__}")'
+# check that neural-lam imports (with the base image's torch), and show the
+# versions (neural-lam-dev has no __version__)
+RUN python -c 'import importlib.metadata as md, neural_lam, torch; print("neural-lam", md.version("neural-lam"), "torch", torch.__version__)'
 
 # The inference artifact (configs, statistics, grids, model description, see
 # artifact/README.md) comes from:

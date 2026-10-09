@@ -187,9 +187,21 @@ INFERENCE_ARTIFACT_PATH=artifact/build/anna-local \
 A 12 h forecast takes about 5 minutes on a DGX Spark (GB10 GPU), and needs
 about 28 GB of GPU memory and up to about 6 GB of RAM (regridding, graph).
 
-In the container: `scripts/run_inference_container.sh` still has the
-interface from before these changes, and is to be updated (step 7 in
-[HISTORY.md](HISTORY.md)).
+In the container, with [scripts/run_inference_container.sh](scripts/run_inference_container.sh):
+
+```bash
+CONTAINER_APP=docker AWS_PROFILE=... \
+    scripts/run_inference_container.sh 2026-10-01T00:00Z PT12H
+```
+
+- It mounts `INFERENCE_WORKDIR` (default `./inference_workdir`) for the inputs
+  and outputs, and passes the variables above.
+- AWS credentials are passed at run time (`AWS_*` variables and `~/.aws`,
+  read-only), never built into the image.
+- With docker it runs as the calling user, so the outputs are yours.
+
+The image gives the same forecast as the uv environment: identical outputs
+for DINI 2026-10-01T00Z PT12H, with the image's NVIDIA torch 2.10.
 
 ### Outputs and conventions
 

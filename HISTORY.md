@@ -342,7 +342,15 @@ First runs on DINI 2026-10-01T00Z, laptop CPU:
 - `train_model --eval test --model hi_lam --graph_name 7deg_rect_hi3 --hidden_dim 300 --hidden_dim_grid 150 --time_delta_enc_dim 32 --processor_layers 2 --num_past_forcing_steps 1 --num_future_forcing_steps 1 --num_past_boundary_steps 1 --num_future_boundary_steps 1 --ar_steps_eval N --load inference_artifact/checkpoint.pkl --save_eval_to_zarr_path ...`
 - `recreate_inputs` → `single_levels.zarr` / `pressure_levels.zarr`.
 
-### 7. `run_inference_container.sh`
+### 7. `run_inference_container.sh` — DONE (2026-10-09, in mlwp-inference-container-anna)
+**Status:** rewritten for `entry.sh`'s interface. Setup: `scripts/run_inference_container.sh <analysis time> [<duration>]`, the image built with `scripts/build_image.sh` (`ARTIFACT_SOURCE=local`), DGX Spark, docker.
+- It passes the `entry.sh` variables (`BOUNDARY_SOURCE`, `IFS_BOUNDARY_PATH`, a local IFS zarr is mounted read-only, `DINI_ROOT`, `SKIP_COMPLETED`, `ANNA_DEBUGGER`) and mounts `INFERENCE_WORKDIR`.
+- AWS credentials are passed at run time only (`AWS_*` variables, `~/.aws` read-only). The broken date fallback is gone, as `entry.sh` normalises the analysis time itself.
+- **docker runs as the calling user** (`--user`, `HOME=/tmp`), otherwise the outputs are root's. The uid has no passwd entry in the image, and torch's compile cache calls `getpass.getuser()`, which fails (`getpwuid(): uid not found`). `USER`/`LOGNAME` are passed for that.
+- **Container verified:** DINI 2026-10-01T00Z PT12H in the image (NVIDIA base image torch 2.10, GB10 GPU) gives outputs **identical** to the uv environment (torch 2.14). It takes about 4 min.
+- Containerfile fix: neural-lam-dev has no `__version__`, so the build's import check failed. It now reads the version from the package metadata.
+
+Original step description:
 - Point `DATASTORE_INPUT_PATHS` at `interior.zarr` and `boundary.zarr`.
 - Pass AWS credentials at run time instead of baking them into image `ENV`.
 - Fix the `dt.astim$ezone` typo in the macOS date fallback.

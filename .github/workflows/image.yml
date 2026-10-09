@@ -1,0 +1,62 @@
+# Build the inference image (x86_64) from the published inference package
+# on Zenodo, and push it to ghcr.io when run on main.
+#
+# Manual only for now: the package isn't published yet. Once it is, set
+# PACKAGE_URL/PACKAGE_MD5 in scripts/build_image.sh and the defaults below,
+# and add `push: branches: [main]` to build on every push to main.
+name: Build and publish the inference image
+
+on:
+  workflow_dispatch:
+    inputs:
+      package_url:
+        description: "URL of the published inference package zip (Zenodo)"
+        required: true
+      package_md5:
+        description: "md5 of the package zip"
+        required: true
+
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner }}/mlwp-inference-container-anna
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Free disk space (the base image is large)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: true
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          swap-storage: true
+
+      - name: Build the image
+        env:
+          CONTAINER_APP: podman
+          ARTIFACT_SOURCE: zenodo
+          PACKAGE_URL: ${{ inputs.package_url }}
+          PACKAGE_MD5: ${{ inputs.package_md5 }}
+          ANNA_IMAGE_NAME: mlwp-inference-container-anna:latest
+        run: scripts/build_image.sh
+
+      - name: Tag the image
+        run: |
+          podman tag mlwp-inference-container-anna:latest "${IMAGE}:latest"
+          podman tag mlwp-inference-container-anna:latest "${IMAGE}:${GITHUB_SHA::7}"
+
+      - name: Push the image to ghcr.io
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | \
+            podman login ghcr.io -u ${{ github.actor }} --password-stdin
+          podman push "${IMAGE}:latest"
+          podman push "${IMAGE}:${GITHUB_SHA::7}"
