@@ -1,3 +1,20 @@
+> This is the plan and record (`INFERENCE_PLAN.md`) kept while ANNA was
+> developed in
+> [mlwm-deployment](https://github.com/leifdenby/mlwm-deployment)
+> (`configurations/ANNA`, branch `feat/anna-dini-ifs-inference`). It moved to
+> this repository with its git history on 2026-10-09. Paths below refer to
+> that layout:
+> - `configurations/ANNA/` is now the repository root;
+> - `src/<module>.py` is now `src/anna_inference/<module>.py`
+>   (`python -m anna_inference.<module>`);
+> - `inference-artifact/*.py` is now `src/anna_inference/artifact/`
+>   (`assemble_artifact.py` → `assemble.py`, `compute_era5_boundary_stats.py`
+>   → `era5_boundary_stats.py`), and its docs and `provenance/` are in
+>   `artifact/`;
+> - `entry.sh`, `build_image.sh` and `run_inference_container.sh` are in
+>   `scripts/`;
+> - the `MLWM_*` environment variables are now `ANNA_*`.
+
 # Plan: run ANNA (gefion-1) with DINI initial and boundary conditions
 
 ## Context

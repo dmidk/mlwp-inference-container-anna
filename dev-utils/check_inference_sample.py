@@ -1,6 +1,6 @@
 """
 Check that neural-lam can build the forecast sample from the inference
-datastores written by `src/create_inference_dataset.py`.
+datastores written by `anna_inference.create_inference_dataset`.
 
 The test dataset is set up as `train_model --eval test` does it in
 `entry.sh` (`--ar_steps_eval` for the forecast duration, no init-time
@@ -15,8 +15,8 @@ filtering, no dynamic time deltas), and its single sample is checked:
   of a fraction, or wind directions).
 
 Usage (from the repository root):
-    uv run --project configurations/ANNA python \\
-        configurations/ANNA/dev-utils/check_inference_sample.py \\
+    uv run python \\
+        dev-utils/check_inference_sample.py \\
         <workdir with config.yaml> --forecast-duration PT6H
 """
 import argparse
@@ -27,8 +27,7 @@ import isodate
 import numpy as np
 import xarray as xr
 
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-from create_inference_dataset import ar_steps_for  # noqa: E402
+from anna_inference.create_inference_dataset import ar_steps_for  # noqa: E402
 
 # standardised values: flag a feature if its mean is further than this from 0,
 # or its std is outside this range

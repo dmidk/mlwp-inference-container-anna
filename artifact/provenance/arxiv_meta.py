@@ -6,8 +6,8 @@ package Zenodo record (`zenodo_draft.py`), which acknowledges all authors of
 arXiv:2504.09340.
 
 Usage (from the repository root):
-    uv run --project configurations/ANNA python \\
-        configurations/ANNA/inference-artifact/provenance/arxiv_meta.py \\
+    uv run python \\
+        artifact/provenance/arxiv_meta.py \\
         2504.09340
 """
 import argparse

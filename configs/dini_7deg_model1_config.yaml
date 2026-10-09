@@ -1,7 +1,7 @@
 # Boundary datastore config for running the DANRA ML LAM model (arXiv:2504.09340) with DINI on the
 # boundary.
 #
-# `src/regrid_dini.py` interpolates a DINI control forecast onto a regular
+# `anna_inference.regrid_dini` interpolates a DINI control forecast onto a regular
 # 0.25 deg lat/lon grid and writes `boundary.zarr` following exactly the same
 # contract as the IFS boundary (see the header of `ifs_7deg_model1_config.yaml`
 # for variable names, units and dims), so this config only differs from the
@@ -19,14 +19,14 @@
 # that 6-hourly grid, see below).
 #
 # VALID-TIME LAYOUT: this config doesn't read the forecast zarr directly.
-# `src/create_inference_dataset.py` first turns the forecast (one cycle) into a
+# `anna_inference.create_inference_dataset` first turns the forecast (one cycle) into a
 # series of valid times on the 6-hourly 00/06/12/18 UTC grid, the layout of the
 # ERA5 boundary the model was trained with, and points the inputs below at that
 # (dims `time` = valid time, `longitude`, `latitude`, `level`). neural-lam then
 # picks the boundary windows exactly as in training. Its forecast-boundary code
 # path can't be used with a single operational cycle (it needs earlier cycles
 # and cycles covering the whole forecast). See `boundary_to_valid_time` in
-# `src/create_inference_dataset.py`.
+# `anna_inference.create_inference_dataset`.
 #
 # Features are normalised with the ERA5 training statistics
 # (`overload_stats_path` in `7deg_config_dini.yaml`).

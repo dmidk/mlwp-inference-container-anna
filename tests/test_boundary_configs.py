@@ -13,10 +13,8 @@ Requires a mllam-data-prep version supporting `domain_cropping` and
 `lead_time` in derived variables, i.e. the one pinned in the ANNA
 `pyproject.toml` (sadamov/mllam-data-prep@building-ml-lams):
 
-    uv run --project configurations/ANNA --with pytest \
-        pytest configurations/ANNA/tests
+    uv run pytest tests
 """
-import sys
 from pathlib import Path
 
 import mllam_data_prep as mdp
@@ -27,12 +25,11 @@ import xarray as xr
 import yaml
 
 CONFIGS_DIR = Path(__file__).parent.parent / "configs"
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-from create_inference_dataset import (  # noqa: E402
+from anna_inference.create_inference_dataset import (  # noqa: E402
     boundary_times,
     boundary_to_valid_time,
 )
-from model_configs import model_configs  # noqa: E402
+from anna_inference.model_configs import model_configs  # noqa: E402
 
 FORECAST_ANALYSIS_TIME = "2026-09-26T12:00"
 FORECAST_DURATION = pd.Timedelta("6h").to_pytimedelta()
@@ -90,7 +87,7 @@ def _spatial_coords():
 def _make_forecast_contract_dataset(analysis_time, lead_hours):
     """
     Synthetic dataset following the IFS boundary contract (also used by the
-    DINI boundary written by `src/regrid_dini.py`). An extra pressure level
+    DINI boundary written by `anna_inference.regrid_dini`). An extra pressure level
     (500 hPa) is included to check that level selection works.
     """
     rng = np.random.default_rng(42)

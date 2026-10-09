@@ -1,5 +1,5 @@
 # neural-lam config for running the DANRA ML LAM model (arXiv:2504.09340) with a DANRA-like interior
-# and DINI (regridded to 0.25 deg by `src/regrid_dini.py`) on the boundary.
+# and DINI (regridded to 0.25 deg by `anna_inference.regrid_dini`) on the boundary.
 #
 # Same as `7deg_config_era5.yaml` (the training config) except for the
 # boundary datastore, which is normalised with the ERA5 training statistics

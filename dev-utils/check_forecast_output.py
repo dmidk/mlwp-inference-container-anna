@@ -10,8 +10,8 @@ differences (e.g. ~1-2 K in t2m, a few m/s in the winds). Much larger ones
 point at a problem with the inputs (units, wind directions, normalisation).
 
 Usage (from the repository root):
-    uv run --project configurations/ANNA python \\
-        configurations/ANNA/dev-utils/check_forecast_output.py <workdir>
+    uv run python \\
+        dev-utils/check_forecast_output.py <workdir>
 """
 import argparse
 import sys

@@ -1,18 +1,14 @@
 """
-Tests for the numerics and physics in `src/regrid_dini.py`.
+Tests for the numerics and physics in `anna_inference.regrid_dini`.
 
-    uv run --project configurations/ANNA --with pytest \
-        pytest configurations/ANNA/tests
+    uv run pytest tests
 """
-import sys
-from pathlib import Path
 
 import numpy as np
 import pytest
 import xarray as xr
 
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-import regrid_dini as rd  # noqa: E402
+from anna_inference import regrid_dini as rd
 
 
 def test_wind_rotation_round_trip():

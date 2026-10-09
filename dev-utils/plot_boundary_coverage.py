@@ -2,16 +2,14 @@
 Map of the ANNA training boundary points coloured by whether they lie inside
 the DINI domain, with the DINI and DANRA (interior) domain outlines.
 
-Usage (from configurations/ANNA, cartopy downloads coastlines on first use):
+Usage (from the repository root, cartopy downloads coastlines on first use):
 
     uv run --with matplotlib python dev-utils/plot_boundary_coverage.py \\
-        src/regrid_dini.py \\
-        inference_artifact/grids/era_7deg_model1_config.grid.zarr \\
-        inference_artifact/grids/danra_model1_config.grid.zarr \\
+        artifact/build/anna-local/grids/era_7deg_model1_config.grid.zarr \\
+        artifact/build/anna-local/grids/danra_model1_config.grid.zarr \\
         s3://harmonie-zarr/dini/control/2026-10-01T000000Z/ \\
         docs/anna_boundary_vs_dini.png
 """
-import importlib.util
 import sys
 
 try:
@@ -27,10 +25,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import xarray as xr
 
-fp_rd, fp_bgrid, fp_dgrid, dini_root, fp_out = sys.argv[1:6]
-spec = importlib.util.spec_from_file_location("rd", fp_rd)
-rd = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(rd)
+from anna_inference import regrid_dini as rd
+
+fp_bgrid, fp_dgrid, dini_root, fp_out = sys.argv[1:5]
 
 # palette: reference categorical slots 1 (blue) and 2 (orange), validated;
 # text/outline ink from the reference text tokens

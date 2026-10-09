@@ -5,7 +5,7 @@ Download the model checkpoint described in an inference artifact's
 Does nothing if the checkpoint is already there with the right md5.
 
 Usage:
-    python fetch_checkpoint.py <artifact_dir>
+    python -m anna_inference.fetch_checkpoint <artifact_dir>
 """
 import argparse
 import hashlib

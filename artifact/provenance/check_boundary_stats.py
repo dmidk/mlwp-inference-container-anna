@@ -1,24 +1,22 @@
 """
-Check ERA5 boundary statistics from `compute_era5_boundary_stats.py`: their
+Check ERA5 boundary statistics from `anna_inference.artifact.era5_boundary_stats`: their
 attributes, the feature order and that all values are finite (std > 0).
 Optionally compare them with another stats zarr (e.g. the 3-day placeholder
 used before the exact statistics were available).
 
 Usage (from the repository root):
-    uv run --project configurations/ANNA python \\
-        configurations/ANNA/inference-artifact/provenance/check_boundary_stats.py \\
+    uv run python \\
+        artifact/provenance/check_boundary_stats.py \\
         era_7deg_model1_config.stats.zarr [--compare placeholder.stats.zarr]
 """
 import argparse
-import sys
 from pathlib import Path
 
 import mllam_data_prep as mdp
 import numpy as np
 import xarray as xr
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
-from compute_era5_boundary_stats import (  # noqa: E402
+from anna_inference.artifact.era5_boundary_stats import (  # noqa: E402
     DEFAULT_CONFIG,
     _feature_definitions,
 )

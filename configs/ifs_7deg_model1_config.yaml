@@ -9,14 +9,14 @@
 # statistics (`overload_stats_path` in `7deg_config_ifs.yaml`).
 #
 # VALID-TIME LAYOUT: this config doesn't read the forecast zarr directly.
-# `src/create_inference_dataset.py` first turns the forecast (one cycle) into a
+# `anna_inference.create_inference_dataset` first turns the forecast (one cycle) into a
 # series of valid times on the 6-hourly 00/06/12/18 UTC grid, the layout of the
 # ERA5 boundary the model was trained with, and points the inputs below at that
 # (dims `time` = valid time, `longitude`, `latitude`, `level`). neural-lam then
 # picks the boundary windows exactly as in training. Its forecast-boundary code
 # path can't be used with a single operational cycle (it needs earlier cycles
 # and cycles covering the whole forecast). See `boundary_to_valid_time` in
-# `src/create_inference_dataset.py`.
+# `anna_inference.create_inference_dataset`.
 #
 # Differences from the neural-lam-dev reference config:
 # - statics (`land_sea_mask`, `geopotential_at_surface`) are taken from IFS

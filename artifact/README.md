@@ -1,24 +1,29 @@
 # Building the ANNA inference package
 
-This directory has the code and records for building the **inference
-package**, everything ANNA needs to run the paper's DANRA model except the
-checkpoint: configs, training statistics, grids and the model description.
-Once built, the package is published on Zenodo, and the container build
-(`ARTIFACT_SOURCE=zenodo`) downloads it along with the checkpoint.
+This is how the **inference package** is built: everything ANNA needs to run
+the paper's DANRA model except the checkpoint (configs, training statistics,
+grids and the model description). Once built, the package is published on
+Zenodo, and the container build (`ARTIFACT_SOURCE=zenodo`) downloads it along
+with the checkpoint.
 
 - [package-README.md](package-README.md) is the README shipped inside the
   package, describing its contents to users of the Zenodo record.
-- Built packages go to `build/` (gitignored): `build/<artifact-name>/` and,
-  with `--zip`, `build/<artifact-name>.zip`.
+- Built packages go to `artifact/build/` (gitignored):
+  `artifact/build/<artifact-name>/` and, with `--zip`,
+  `artifact/build/<artifact-name>.zip`.
 
-| File | What |
+The code is in the `anna_inference.artifact` package
+(`src/anna_inference/artifact/`); run each module with
+`uv run python -m anna_inference.artifact.<module>` from the repository root.
+
+| Module / file | What |
 |---|---|
-| `assemble_artifact.py` | builds the package from the inputs below |
-| `compute_era5_boundary_stats.py` | exact ERA5 boundary training statistics from WeatherBench2 |
-| `check_checkpoint_compat.py` | strict checkpoint load and one-step forecast on synthetic data with the package's configs |
-| `zenodo_draft.py` | uploads the package zip as a Zenodo **draft** (never publishes) |
-| `sanitize_checkpoint.py` | loads/cleans the gefion-1 checkpoint (see [gefion-1](#gefion-1-a-prior-incorrect-inference-artifact)) |
-| `provenance/` | tools used to collect what the package records (below) |
+| `assemble` | builds the package from the inputs below |
+| `era5_boundary_stats` | exact ERA5 boundary training statistics from WeatherBench2 |
+| `check_checkpoint_compat` | strict checkpoint load and one-step forecast on synthetic data with the package's configs |
+| `zenodo_draft` | uploads the package zip as a Zenodo **draft** (never publishes) |
+| `sanitize_checkpoint` | loads/cleans the gefion-1 checkpoint (see [gefion-1](#gefion-1-a-prior-incorrect-inference-artifact)) |
+| `artifact/provenance/` (scripts) | tools used to collect what the package records (below) |
 
 ## The model
 
@@ -54,8 +59,7 @@ The paper's DANRA model (arXiv:2504.09340) is described in
    ERA5 on a server with good bandwidth to GCS:
 
    ```bash
-   uv run --project configurations/ANNA --with gcsfs \
-       python configurations/ANNA/inference-artifact/compute_era5_boundary_stats.py \
+   uv run --with gcsfs python -m anna_inference.artifact.era5_boundary_stats \
        --output era_7deg_model1_config.stats.zarr \
        --partials-dir era5_stats_partials
    ```
@@ -69,7 +73,7 @@ The paper's DANRA model (arXiv:2504.09340) is described in
    - It was validated against an mllam-data-prep-built datastore to about
      1e-13.
    - `provenance/check_boundary_stats.py` checks the result.
-3. The **DANRA v0.5.0** public store, read by `src/regrid_dini.py
+3. The **DANRA v0.5.0** public store, read by `anna_inference.regrid_dini
    create-danra-grid` for the DANRA grid and statics.
 4. The **repo configs** in [`../configs/`](../configs/).
 
@@ -78,40 +82,44 @@ The paper's DANRA model (arXiv:2504.09340) is described in
 From the repository root, behind DMI's proxy with `truststore`:
 
 ```bash
-uv run --project configurations/ANNA --with truststore python -c \
-    "import truststore, runpy, sys; truststore.inject_into_ssl(); sys.argv = sys.argv[1:]; runpy.run_path(sys.argv[0], run_name='__main__')" \
-    configurations/ANNA/inference-artifact/assemble_artifact.py \
+uv run python -m anna_inference.artifact.assemble \
     --gefion-1-zip gefion-1.zip \
     --boundary-stats era_7deg_model1_config.stats.zarr \
     --artifact-name anna-danra-2026-10-06 --zip
 ```
 
+Behind a TLS-inspecting proxy, run it with the OS trust store:
+
+```bash
+uv run --with truststore python -c \
+    "import truststore, runpy, sys; truststore.inject_into_ssl(); sys.argv[0] = 'assemble'; runpy.run_module('anna_inference.artifact.assemble', run_name='__main__')" \
+    --gefion-1-zip gefion-1.zip ...
+```
+
 - Add `--fetch-checkpoint` to also download `danra_model.ckpt` (md5-checked)
   into the package directory for local runs, e.g. with
-  `INFERENCE_ARTIFACT_PATH=inference-artifact/build/<name> ./entry.sh` or
-  `LOCAL_ARTIFACT_DIR=inference-artifact/build/<name> ./build_image.sh`. The
-  local container build defaults to `build/anna-local`.
+  `INFERENCE_ARTIFACT_PATH=artifact/build/<name> scripts/entry.sh` or
+  `LOCAL_ARTIFACT_DIR=artifact/build/<name> scripts/build_image.sh`. The
+  local container build defaults to `artifact/build/anna-local`.
 - The checkpoint is never put in the zip.
 
 ## Check
 
 ```bash
 # zip == directory, no checkpoint, no gefion-1 files, no local paths
-uv run --project configurations/ANNA python \
-    configurations/ANNA/inference-artifact/provenance/check_package.py \
-    configurations/ANNA/inference-artifact/build/anna-danra-2026-10-06.zip
+uv run python artifact/provenance/check_package.py \
+    artifact/build/anna-danra-2026-10-06.zip
 # strict checkpoint load (561 tensors) and a one-step forecast with the
 # package's configs
-uv run --project configurations/ANNA python \
-    configurations/ANNA/inference-artifact/check_checkpoint_compat.py \
+uv run python -m anna_inference.artifact.check_checkpoint_compat \
     <path>/danra_model.ckpt \
-    configurations/ANNA/inference-artifact/build/anna-danra-2026-10-06/configs \
+    artifact/build/anna-danra-2026-10-06/configs \
     <workdir> --run-eval
 ```
 
 ## Publish
 
-`zenodo_draft.py` creates (or updates) a **draft**. The person publishing
+`anna_inference.artifact.zenodo_draft` creates (or updates) a **draft**. The person publishing
 reviews it in the Zenodo web UI and publishes it there, which is
 irreversible.
 
@@ -125,19 +133,19 @@ The record:
 - creators: Kasper Hintz and Leif Denby (DMI);
 - contributors: the other authors of arXiv:2504.09340, who are acknowledged;
 - related identifiers: Zenodo 15131838 (`requires`), arXiv:2504.09340,
-  neural-lam-dev and mlwm-deployment.
+  neural-lam-dev and this repository.
 
 The author list came from `provenance/arxiv_meta.py 2504.09340` and the
 checkpoint record's metadata from `provenance/zenodo_record.py 15131838`.
 
 ```bash
-ZENODO_TOKEN=... uv run --project configurations/ANNA python \
-    configurations/ANNA/inference-artifact/zenodo_draft.py \
-    --zip configurations/ANNA/inference-artifact/build/anna-danra-2026-10-06.zip
+ZENODO_TOKEN=... uv run python -m anna_inference.artifact.zenodo_draft \
+    --zip artifact/build/anna-danra-2026-10-06.zip
 ```
 
-After publishing, set `PACKAGE_URL`/`PACKAGE_MD5` in `../build_image.sh` (and
-mention the record in `../README.md`).
+After publishing, set `PACKAGE_URL`/`PACKAGE_MD5` in
+[`../scripts/build_image.sh`](../scripts/build_image.sh) (and mention the
+record in [`../README.md`](../README.md)).
 
 ## gefion-1: a prior, incorrect inference artifact
 
@@ -152,7 +160,7 @@ unrelated weights and a different graph. It was replaced on 2026-10-06.
 | training | 80 epochs from scratch, 1-step rollouts, neural-lam-dev `e58e334c` | fine-tune with 4-step rollouts, `e7d11c9` |
 | graph | `7deg_rect_hi3` (417 tensors) | `7deg_rect_hi4` (561 tensors) |
 | `--dynamic_time_deltas` | on | off |
-| checkpoint | full, with pickled datastores pointing at Gefion storage (needs `sanitize_checkpoint.py` to load) | weights only |
+| checkpoint | full, with pickled datastores pointing at Gefion storage (needs `sanitize_checkpoint` to load) | weights only |
 | boundary stats / grid | missing from the artifact | (package: exact stats, recovered grid) |
 
 Other problems with gefion-1:
@@ -160,8 +168,8 @@ Other problems with gefion-1:
 - an interim local build used placeholder boundary statistics from 3 days of
   ERA5, up to about 1 std off.
 
-It is kept only as an **input** to `assemble_artifact.py`, because the paper
-model was trained on the same datastores. Nothing from gefion-1 apart from
-the interior statistics and the boundary grid goes into the package.
-`artifact.yaml` records its sha256. The full history is in
-[`../INFERENCE_PLAN.md`](../INFERENCE_PLAN.md).
+It is kept only as an **input** to `anna_inference.artifact.assemble`,
+because the paper model was trained on the same datastores. Nothing from
+gefion-1 apart from the interior statistics and the boundary grid goes into
+the package. `artifact.yaml` records its sha256. The full history is in
+[`../HISTORY.md`](../HISTORY.md).

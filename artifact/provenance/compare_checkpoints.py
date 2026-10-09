@@ -9,19 +9,16 @@ inference artifact zip with `checkpoint.pkl` in it (e.g. gefion-1.zip) or a
 URL; everything is loaded in memory.
 
 Usage (from the repository root):
-    uv run --project configurations/ANNA python \\
-        configurations/ANNA/inference-artifact/provenance/compare_checkpoints.py \\
+    uv run python \\
+        artifact/provenance/compare_checkpoints.py \\
         gefion-1.zip \\
         "https://zenodo.org/records/15131838/files/danra_model.ckpt?download=1"
 """
 import argparse
 import io
-import sys
 import zipfile
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
-from sanitize_checkpoint import load_checkpoint  # noqa: E402
+from anna_inference.artifact.sanitize_checkpoint import load_checkpoint
 
 
 def _read(source):

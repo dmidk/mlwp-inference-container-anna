@@ -31,9 +31,10 @@ with the DINI data); target points outside the DINI domain are handled with
 
 Usage:
     # once: cache the DANRA grid and statics
-    python regrid_dini.py create-danra-grid --output danra_model1_config.grid.zarr
+    python -m anna_inference.regrid_dini create-danra-grid \\
+        --output danra_model1_config.grid.zarr
 
-    python regrid_dini.py regrid \\
+    python -m anna_inference.regrid_dini regrid \\
         --dini-root s3://harmonie-zarr/dini/control/2026-09-26T180000Z/ \\
         --danra-grid danra_model1_config.grid.zarr \\
         --forecast-duration PT18H --output inference_workdir/inputs

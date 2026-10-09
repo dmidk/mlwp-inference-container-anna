@@ -22,11 +22,10 @@ The data is random noise, so this only checks that the software stack and
 checkpoint fit together, not forecast skill.
 
 The (superseded) gefion-1 checkpoint should first be cleaned with
-`sanitize_checkpoint.py`.
+`anna_inference.artifact.sanitize_checkpoint`.
 
 Usage (from the repository root), e.g. for an assembled package:
-    uv run --project configurations/ANNA python \\
-        configurations/ANNA/inference-artifact/check_checkpoint_compat.py \\
+    uv run python -m anna_inference.artifact.check_checkpoint_compat \\
         <package>/danra_model.ckpt <package>/configs <workdir> --run-eval
 """
 import argparse
@@ -48,8 +47,10 @@ import pandas as pd  # noqa: E402
 import torch  # noqa: E402
 import xarray as xr  # noqa: E402
 
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-from model_configs import TRAINING_BOUNDARY_SOURCE, model_configs  # noqa: E402
+from anna_inference.model_configs import (  # noqa: E402
+    TRAINING_BOUNDARY_SOURCE,
+    model_configs,
+)
 
 LEVELS = [100, 200, 400, 600, 700, 850, 925, 1000]
 INTERIOR_SL_VARS = [

@@ -4,7 +4,7 @@
 # inference artifact, see inference-artifact/README.md), except that the
 # paths to DANRA v0.5.0 on the Gefion project storage have been replaced with
 # the public copy of the same dataset. At inference time the input paths are overridden (see
-# `src/create_inference_dataset.py`), this config also serves as the
+# `anna_inference.create_inference_dataset`), this config also serves as the
 # `interior_dataset_config_path` reference for the boundary datastores'
 # `domain_cropping`.
 #

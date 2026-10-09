@@ -8,11 +8,12 @@ See README.md in this directory.
 The interior statistics and the boundary grid of the datastores the model was
 trained with are taken from the (superseded) `gefion-1` inference artifact,
 which was built from the same datastores; the ERA5 boundary statistics are
-computed with compute_era5_boundary_stats.py. The package contains:
+computed with `anna_inference.artifact.era5_boundary_stats`. The package
+contains:
 
     configs/                interior and boundary (ERA5/IFS/DINI) datastore
                             configs, neural-lam configs and model.yaml (the
-                            model to run) from configurations/ANNA/configs/
+                            model to run) from configs/ in this repository
     configs/era_7deg_model1_config.zarr
                             ERA5 "stats datastore" that neural-lam opens via
                             `overload_stats_path` (statistics and splits only)
@@ -20,7 +21,7 @@ computed with compute_era5_boundary_stats.py. The package contains:
                             interior training statistics (from gefion-1)
     stats/era_7deg_model1_config.stats.zarr
                             ERA5 boundary training statistics (from
-                            compute_era5_boundary_stats.py, or a placeholder)
+                            era5_boundary_stats, or a placeholder)
     grids/era_7deg_model1_config.grid.zarr
                             lat/lon of the 18014 boundary points the model was
                             trained with, recovered from the gefion-1
@@ -28,7 +29,7 @@ computed with compute_era5_boundary_stats.py. The package contains:
     grids/danra_model1_config.grid.zarr
                             DANRA grid (x, y, lat, lon) and statics (lsm,
                             orography) from the public DANRA v0.5.0 store, the
-                            target grid for regridding DINI (src/regrid_dini.py)
+                            target grid for regridding DINI (regrid_dini)
     artifact.yaml           provenance of this package
     README.md               description of the package (package-README.md)
     danra_model.ckpt        the model checkpoint, only with --fetch-checkpoint
@@ -36,21 +37,19 @@ computed with compute_era5_boundary_stats.py. The package contains:
 
 Usage (from the repository root):
 
-    uv run --project configurations/ANNA \\
-        python configurations/ANNA/inference-artifact/assemble_artifact.py \\
+    uv run python -m anna_inference.artifact.assemble \\
         --gefion-1-zip gefion-1.zip \\
         --boundary-stats era_7deg_model1_config.stats.zarr \\
         --artifact-name anna-danra-2026-10-06 --zip
 
-writes `inference-artifact/build/<artifact-name>/` and, with `--zip`,
-`inference-artifact/build/<artifact-name>.zip` (contents at the zip root,
+writes `artifact/build/<artifact-name>/` and, with `--zip`,
+`artifact/build/<artifact-name>.zip` (contents at the zip root,
 without the checkpoint) for publishing. Add `--fetch-checkpoint` to also
 download the checkpoint (md5-checked) for running locally.
 """
 import argparse
 import datetime
 import hashlib
-import importlib.util
 import shutil
 import subprocess
 import tempfile
@@ -63,9 +62,19 @@ import yaml
 import zarr
 from loguru import logger
 
-HERE = Path(__file__).parent
-ANNA_DIR = HERE.parent
-BUILD_DIR = HERE / "build"
+from anna_inference import fetch_checkpoint
+from anna_inference import model_configs as mc
+from anna_inference import regrid_dini
+from anna_inference.artifact import (
+    era5_boundary_stats,
+    layout,
+    sanitize_checkpoint,
+)
+
+# the repository (the package is installed in editable mode for development)
+REPO_DIR = Path(__file__).resolve().parents[3]
+BUILD_DIR = REPO_DIR / "artifact" / "build"
+REPO_URL = "https://github.com/leifdenby/mlwp-inference-container-anna"
 
 BOUNDARY_DATASTORE_NAME = "era_7deg_model1_config"
 INTERIOR_DATASTORE_NAME = "danra_model1_config"
@@ -74,17 +83,8 @@ BOUNDARY_STATS_DESCRIPTION = (
     "Training statistics of the ERA5 boundary datastore "
     "(era_7deg_model1_config) of the DANRA ML LAM models "
     "(arXiv:2504.09340), recomputed from WeatherBench2 ERA5 with "
-    "configurations/ANNA/inference-artifact/compute_era5_boundary_stats.py"
+    f"anna_inference.artifact.era5_boundary_stats ({REPO_URL})"
 )
-
-
-def _import_module(name, directory=HERE):
-    spec = importlib.util.spec_from_file_location(
-        name, directory / f"{name}.py"
-    )
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
 
 
 def _check_model_configs(configs_dir):
@@ -94,7 +94,6 @@ def _check_model_configs(configs_dir):
     datastores of the training (ERA5) neural-lam config named in model.yaml,
     and the boundary statistics every boundary source is normalised with.
     """
-    mc = _import_module("model_configs", directory=ANNA_DIR / "src")
     training = mc.model_configs(configs_dir, mc.TRAINING_BOUNDARY_SOURCE)
     names = dict(
         interior=(training.interior_datastore, INTERIOR_DATASTORE_NAME),
@@ -130,7 +129,7 @@ def _git_describe():
     try:
         return subprocess.run(
             ["git", "describe", "--always", "--dirty"],
-            cwd=ANNA_DIR,
+            cwd=REPO_DIR,
             capture_output=True,
             text=True,
             check=True,
@@ -239,10 +238,10 @@ def main():
         type=Path,
         default=None,
         help="artifact directory to create (must not exist, default: "
-        "inference-artifact/build/<artifact-name>)",
+        "artifact/build/<artifact-name>)",
     )
     parser.add_argument(
-        "--configs-dir", type=Path, default=ANNA_DIR / "configs"
+        "--configs-dir", type=Path, default=REPO_DIR / "configs"
     )
     parser.add_argument(
         "--artifact-name",
@@ -275,8 +274,6 @@ def main():
         raise SystemExit(f"{args.zip} already exists, remove it first")
 
     _check_model_configs(args.configs_dir)
-    sanitize = _import_module("sanitize_checkpoint")
-    stats_script = _import_module("compute_era5_boundary_stats")
 
     ds_boundary_stats = xr.open_zarr(args.boundary_stats).load()
     is_placeholder = ds_boundary_stats.attrs.get("PLACEHOLDER") == "true"
@@ -288,7 +285,7 @@ def main():
             )
         logger.warning(
             "the boundary statistics are a PLACEHOLDER, replace them with the "
-            "output of compute_era5_boundary_stats.py for real forecasts"
+            "output of era5_boundary_stats for real forecasts"
         )
 
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -307,13 +304,14 @@ def main():
         logger.info(
             "recovering the boundary grid from the gefion-1 checkpoint"
         )
-        ckpt = sanitize.load_checkpoint(tmpdir / "checkpoint.pkl")
+        ckpt = sanitize_checkpoint.load_checkpoint(tmpdir / "checkpoint.pkl")
         ds_grid = _boundary_grid_from_checkpoint(
-            ckpt, stats_script.SUBSET_LATS, stats_script.SUBSET_LONS
+            ckpt,
+            era5_boundary_stats.SUBSET_LATS,
+            era5_boundary_stats.SUBSET_LONS,
         )
         ds_grid.to_zarr(out / "grids" / f"{BOUNDARY_DATASTORE_NAME}.grid.zarr")
         logger.info("caching DANRA grid and statics")
-        regrid_dini = _import_module("regrid_dini", directory=ANNA_DIR / "src")
         regrid_dini.create_danra_grid(
             out / "grids" / f"{INTERIOR_DATASTORE_NAME}.grid.zarr"
         )
@@ -328,7 +326,7 @@ def main():
             args.boundary_stats,
             out / "stats" / f"{BOUNDARY_DATASTORE_NAME}.stats.zarr",
         )
-        # older runs of compute_era5_boundary_stats.py described the stats as
+        # older runs of era5_boundary_stats described the stats as
         # being for gefion-1; they are the statistics of the boundary
         # datastore, shared by all models trained on it (the same text is used
         # in artifact.yaml below)
@@ -360,7 +358,7 @@ def main():
                 "ANNA inference package for the DANRA ML LAM model of "
                 "arXiv:2504.09340 (checkpoint: Zenodo "
                 f"{model['checkpoint']['zenodo_record']}), see "
-                "configurations/ANNA/inference-artifact/README.md"
+                f"{REPO_URL} (artifact/README.md)"
             ),
             model_checkpoint=model["checkpoint"],
             assembled_from=dict(
@@ -376,8 +374,8 @@ def main():
                     if is_placeholder
                     else {"description": BOUNDARY_STATS_DESCRIPTION}
                 ),
-                configs_dir="configurations/ANNA/configs",
-                mlwm_deployment_git=_git_describe(),
+                repo=REPO_URL,
+                repo_git=_git_describe(),
             ),
             checkpoint_included=False,
             created_on=datetime.datetime.now()
@@ -387,36 +385,22 @@ def main():
         (out / "artifact.yaml").write_text(
             yaml.safe_dump(meta, sort_keys=False)
         )
-        shutil.copy(HERE / "package-README.md", out / "README.md")
+        shutil.copy(
+            REPO_DIR / "artifact" / "package-README.md", out / "README.md"
+        )
+
+        layout.check_artifact(out)
 
         args.output.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(str(out), str(args.output))
     logger.info(f"assembled artifact in {args.output}")
 
     if args.zip is not None:
-        _write_zip(args.output, args.zip)
+        layout.write_zip(args.output, args.zip)
         logger.info(f"packaged artifact as {args.zip}")
 
     if args.fetch_checkpoint:
-        fetcher = _import_module(
-            "fetch_checkpoint", directory=ANNA_DIR / "src"
-        )
-        fetcher.fetch_checkpoint(args.output)
-
-
-def _write_zip(artifact_dir, fp_zip):
-    """
-    Zip the artifact directory with its contents at the zip root (as written
-    by `mlwm.build_inference_artifact` and expected by the Containerfile,
-    which unzips into `inference_artifact/`). Written to a temporary file
-    first, so an interrupted run doesn't leave a partial zip behind.
-    """
-    fp_tmp = fp_zip.with_name(fp_zip.name + ".tmp")
-    with zipfile.ZipFile(fp_tmp, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-        for fp in sorted(artifact_dir.rglob("*")):
-            if fp.is_file():
-                zf.write(fp, fp.relative_to(artifact_dir))
-    fp_tmp.replace(fp_zip)
+        fetch_checkpoint.fetch_checkpoint(args.output)
 
 
 if __name__ == "__main__":

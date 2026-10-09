@@ -50,15 +50,14 @@ artifact (`stats/{datastore_name}.stats.zarr`).
 
 Example (full, exact computation):
 
-    uv run --project configurations/ANNA --with gcsfs \\
-        python configurations/ANNA/inference-artifact/compute_era5_boundary_stats.py \\
+    uv run --with gcsfs python -m anna_inference.artifact.era5_boundary_stats \\
         --output era_7deg_model1_config.stats.zarr \\
         --partials-dir era5_stats_partials
 
 Validation against a datastore built by mllam-data-prep (e.g. a small test
 datastore built from a local ERA5 subset):
 
-    ... compute_era5_boundary_stats.py --source era_danra_model1_subset.zarr \\
+    ... era5_boundary_stats --source era_danra_model1_subset.zarr \\
         --start 2010-01-01T00:00 --end 2010-01-02T00:00 \\
         --output test.stats.zarr --partials-dir test_partials
 """
@@ -79,7 +78,9 @@ from tqdm import tqdm
 
 WB2_ERA5 = "gs://weatherbench2/datasets/era5/1959-2022-6h-1440x721.zarr"
 DEFAULT_CONFIG = (
-    Path(__file__).parent.parent / "configs" / "era_7deg_model1_config.yaml"
+    Path(__file__).resolve().parents[3]
+    / "configs"
+    / "era_7deg_model1_config.yaml"
 )
 
 # ERA5 subset box the training boundary datastore was built from
@@ -460,7 +461,8 @@ def main():
             "(era_7deg_model1_config) of the DANRA ML LAM models "
             "(arXiv:2504.09340), recomputed "
             "from WeatherBench2 ERA5 over the era_danra_model1_subset box with "
-            "configurations/ANNA/inference-artifact/compute_era5_boundary_stats.py"
+            "anna_inference.artifact.era5_boundary_stats "
+            "(https://github.com/leifdenby/mlwp-inference-container-anna)"
         ),
         source=args.source,
         split=SPLIT_NAME,

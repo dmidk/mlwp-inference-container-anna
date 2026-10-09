@@ -1,6 +1,7 @@
-# ANNA
+# mlwp-inference-container-anna
 
-ANNA runs the **DANRA machine-learning limited area model** of Adamov et al.
+This repository builds the inference container images for **ANNA**, which
+runs the **DANRA machine-learning limited area model** of Adamov et al.
 (2025), ["Building Machine Learning Limited Area Models: Kilometer-Scale
 Weather Forecasting in Realistic Settings"](https://arxiv.org/abs/2504.09340)
 operationally from **DINI** (interior initial states), with **DINI or IFS** on
@@ -8,8 +9,24 @@ the boundary. The model is a hierarchical graph-based model (neural-lam
 `hi_lam`, graph `7deg_rect_hi4`) trained on DANRA (2.5 km, 3-hourly) with ERA5
 boundary forcing on a 7.19° ring around the DANRA domain.
 
-The full history, decisions and the reasons behind them are in
-[INFERENCE_PLAN.md](INFERENCE_PLAN.md).
+It holds everything needed for that, in one Python project
+([pyproject.toml](pyproject.toml), exact environment in `uv.lock`):
+- the inference pipeline (`src/anna_inference/`, run by
+  [scripts/entry.sh](scripts/entry.sh), the image's entrypoint);
+- the [Containerfile](Containerfile) and
+  [scripts/build_image.sh](scripts/build_image.sh);
+- the tools that build the model's *inference artifact* (configs, training
+  statistics, grids, see below; `src/anna_inference/artifact/`, docs in
+  [artifact/](artifact/README.md)).
+
+ANNA was developed in
+[mlwm-deployment](https://github.com/leifdenby/mlwm-deployment)
+(`configurations/ANNA`) and moved here with its git history. The full
+history, decisions and the reasons behind them are in
+[HISTORY.md](HISTORY.md). Paths in it refer to the layout in mlwm-deployment
+(e.g. `configurations/ANNA/src/regrid_dini.py` is now
+`src/anna_inference/regrid_dini.py`, `inference-artifact/` is now
+`artifact/` and `src/anna_inference/artifact/`).
 
 ## Model
 
@@ -31,7 +48,7 @@ An earlier artifact, `gefion-1`, held an unpublished ablation run (graph
 `7deg_rect_hi3`, trained with `--dynamic_time_deltas`), not the paper's model.
 It was trained on the same datastores, so it still supplies the training
 statistics and grids. See
-[inference-artifact/README.md](inference-artifact/README.md#gefion-1-a-prior-incorrect-inference-artifact).
+[artifact/README.md](artifact/README.md#gefion-1-a-prior-incorrect-inference-artifact).
 
 ## Software
 
@@ -66,14 +83,15 @@ The configs are linked in a chain, and each link is stated in one place only:
 3. for DINI/IFS, it also names the ERA5 training boundary datastore whose
    statistics normalise the boundary (`overload_stats_path`).
 
-`src/model_configs.py` follows this chain for the scripts.
+`anna_inference.model_configs` follows this chain for the scripts.
 
 ## Inference artifact
 
-In mlwm-deployment, an **inference artifact** is a directory (shipped as a
-zip) that holds everything needed to run a trained model's forecasts, apart
-from the input data and the software. See the
-[repository README](../../README.md). It normally has:
+An **inference artifact** is a directory (shipped as a zip) that holds
+everything needed to run a trained model's forecasts, apart from the input
+data and the software (the term comes from
+[mlwm-deployment](https://github.com/leifdenby/mlwm-deployment)). It
+normally has:
 - the model checkpoint (weights);
 - the configs the model was trained with (neural-lam and mllam-data-prep
   datastore configs) and its training arguments;
@@ -85,11 +103,10 @@ its inputs in a particular feature order and normalisation, and on a
 particular grid and graph, and these only follow from the configs and
 statistics it was trained with.
 
-Usually the artifact is built with `mlwm.build_inference_artifact` on the
-machine the model was trained on. ANNA's had to be reconstructed after the
+The artifact should be collected on the machine the model was trained on,
+where the training datastores are. ANNA's had to be reconstructed after the
 fact: the boundary configs, statistics and grid were missing (see
-[inference-artifact/README.md](inference-artifact/README.md)). ANNA's
-artifact has:
+[artifact/README.md](artifact/README.md)). ANNA's artifact has:
 
 | Path | What |
 |---|---|
@@ -111,37 +128,39 @@ The container build puts the two back together:
   which `entry.sh` reads (`INFERENCE_ARTIFACT_PATH`).
 
 How the artifact is built, checked and published, and its provenance, are in
-[inference-artifact/README.md](inference-artifact/README.md). That includes
-the superseded `gefion-1` artifact, which held a different model. The README
-shipped inside the package is
-[inference-artifact/package-README.md](inference-artifact/package-README.md).
+[artifact/README.md](artifact/README.md). That includes the superseded
+`gefion-1` artifact, which held a different model. The README shipped inside
+the package is [artifact/package-README.md](artifact/package-README.md).
 
 ## Building the image
 
 ```bash
-CONTAINER_APP=podman ./build_image.sh
+CONTAINER_APP=podman scripts/build_image.sh
 ```
 
+The image is tagged `mlwp-inference-container-anna:latest` (`ANNA_IMAGE_NAME`).
+
 - `ARTIFACT_SOURCE=local` (default) uses a locally built artifact directory,
-  `LOCAL_ARTIFACT_DIR` (default `inference-artifact/build/anna-local`).
+  `LOCAL_ARTIFACT_DIR` (default `artifact/build/anna-local`).
 - `ARTIFACT_SOURCE=zenodo` downloads the published package (`PACKAGE_URL`,
   `PACKAGE_MD5`).
 
 In both cases the model checkpoint is downloaded from Zenodo during the build
 (md5-checked) if it isn't already there. No AWS credentials are needed. Set
-`MLWM_PULL_PROXY` to pull the base image through DMI's proxy.
+`ANNA_PULL_PROXY` to pull the base image through DMI's proxy.
 
 ## Running a forecast
 
-[entry.sh](entry.sh) runs the whole pipeline:
+[scripts/entry.sh](scripts/entry.sh) runs the whole pipeline:
 
-1. `src/regrid_dini.py`: DINI → DANRA grid (interior) and, for the DINI
-   boundary, → the 0.25° ERA5 boundary box
-2. `src/create_inference_dataset.py`: inference datastores and neural-lam
-   config
+1. `anna_inference.regrid_dini`: DINI → DANRA grid (interior) and, for the
+   DINI boundary, → the 0.25° ERA5 boundary box. Reads DINI concurrently
+   with dask
+2. `anna_inference.create_inference_dataset`: inference datastores and
+   neural-lam config
 3. `neural_lam.build_rectangular_graph`: the model's graph (`model.yaml`)
 4. `neural_lam.train_model --eval test`: the forecast
-5. `src/convert_output.py`: DANRA-like output datasets
+5. `anna_inference.convert_output`: DANRA-like output datasets
 
 It's configured through environment variables:
 
@@ -153,20 +172,24 @@ It's configured through environment variables:
 | `DINI_ROOT` | `s3://harmonie-zarr/dini/control/{analysis}/` | DINI forecast zarrs |
 | `IFS_BOUNDARY_PATH` | | IFS forecast zarr, required for `BOUNDARY_SOURCE=ifs` |
 | `INFERENCE_WORKDIR` | `./inference_workdir` | |
-| `INFERENCE_ARTIFACT_PATH` | `./inference_artifact` | the inference artifact (with checkpoint); outside the container e.g. `inference-artifact/build/<name>` |
-| `MLWM_DEBUGGER` | | `ipdb` to debug the python steps on exceptions |
+| `INFERENCE_ARTIFACT_PATH` | `./inference_artifact` | the inference artifact (with checkpoint); outside the container e.g. `artifact/build/<name>` |
+| `ANNA_DEBUGGER` | | `ipdb` to debug the python steps on exceptions |
+| `SKIP_COMPLETED` | `false` | `true` skips the stages already completed in the workdir (e.g. rerun only the forecast) |
 
-Outside the container, run it from `configurations/ANNA` in the uv
-environment, with AWS credentials for reading DINI (e.g. `AWS_PROFILE`):
+Outside the container, run it in the uv environment of this repository
+(`uv sync`), with AWS credentials for reading DINI (e.g. `AWS_PROFILE`):
 
 ```bash
-INFERENCE_ARTIFACT_PATH=inference-artifact/build/anna-local \
-    ANALYSIS_TIME=2026-10-01T00:00Z FORECAST_DURATION=PT18H ./entry.sh
+INFERENCE_ARTIFACT_PATH=artifact/build/anna-local \
+    ANALYSIS_TIME=2026-10-01T00:00Z FORECAST_DURATION=PT18H scripts/entry.sh
 ```
 
-In the container: `run_inference_container.sh` still has the interface from
-before these changes, and is to be updated (step 7 in
-[INFERENCE_PLAN.md](INFERENCE_PLAN.md)).
+A 12 h forecast takes about 5 minutes on a DGX Spark (GB10 GPU), and needs
+about 28 GB of GPU memory and up to about 6 GB of RAM (regridding, graph).
+
+In the container: `scripts/run_inference_container.sh` still has the
+interface from before these changes, and is to be updated (step 7 in
+[HISTORY.md](HISTORY.md)).
 
 ### Outputs and conventions
 
@@ -208,14 +231,24 @@ metres of the DANRA Lambert projection, 2D `lat`/`lon`, and a
 
 ## Development
 
-- [inference-artifact/](inference-artifact/): building, checking and
-  publishing the inference artifact
-- [dev-utils/](dev-utils/)`plot_boundary_coverage.py`: the boundary coverage
-  map above
-- Tests:
-  ```bash
-  uv run --project configurations/ANNA --with pytest \
-      python -m pytest configurations/ANNA/tests
-  ```
-- The `src/` scripts can also be run on their own; see their `--help` and
-  docstrings.
+```bash
+uv sync                          # the environment (exact versions in uv.lock)
+uv run pre-commit install        # black (79), isort, flake8 on every commit
+uv run pytest tests
+```
+
+- [artifact/](artifact/README.md): building, checking and publishing the
+  inference artifact
+- [dev-utils/](dev-utils/):
+  - `check_forecast_output.py`: sanity checks of a forecast, against DINI;
+  - `check_inference_sample.py`: checks the sample neural-lam builds from
+    the inference datastores;
+  - `plot_boundary_coverage.py`: the boundary coverage map above.
+- Each pipeline step can also be run on its own, e.g.
+  `uv run python -m anna_inference.regrid_dini --help`.
+
+## Licence
+
+The code is licensed under the [MIT licence](LICENSE). The published
+inference package (configs, statistics, grids) is CC-BY-4.0, and the model
+checkpoint (Zenodo 15131838) is CC-BY-4.0 by its authors.

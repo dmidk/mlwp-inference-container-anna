@@ -1,7 +1,8 @@
 """
 Create (or update) a DRAFT Zenodo deposition for the ANNA inference package.
 
-The draft gets the package zip (from `assemble_artifact.py --zip`) and the
+The draft gets the package zip (from `anna_inference.artifact.assemble --zip`)
+and the
 record metadata below. It is never published by this script: review the draft
 in the Zenodo web UI and publish it there (publishing is irreversible). Once
 published, put the file's download URL and md5 into build_image.sh /
@@ -10,15 +11,17 @@ Containerfile (`PACKAGE_URL`, `PACKAGE_MD5`).
 The Zenodo personal access token (scope `deposit:write`) is read from the
 `ZENODO_TOKEN` environment variable and is not stored anywhere.
 
-Usage:
+Usage (ZIP=artifact/build/anna-danra-2026-10-06.zip):
     # review the metadata without contacting Zenodo
-    python zenodo_draft.py --zip build/anna-danra-2026-10-06.zip --dry-run
+    python -m anna_inference.artifact.zenodo_draft --zip $ZIP --dry-run
     # rehearse on sandbox.zenodo.org (needs a sandbox token)
-    ZENODO_TOKEN=... python zenodo_draft.py --zip ... --sandbox
+    ZENODO_TOKEN=... python -m anna_inference.artifact.zenodo_draft \\
+        --zip $ZIP --sandbox
     # create the draft on zenodo.org
-    ZENODO_TOKEN=... python zenodo_draft.py --zip build/anna-danra-2026-10-06.zip
+    ZENODO_TOKEN=... python -m anna_inference.artifact.zenodo_draft --zip $ZIP
     # update an existing draft (replace the file, update the metadata)
-    ZENODO_TOKEN=... python zenodo_draft.py --zip ... --deposition-id 1234567
+    ZENODO_TOKEN=... python -m anna_inference.artifact.zenodo_draft \\
+        --zip $ZIP --deposition-id 1234567
 """
 import argparse
 import hashlib
@@ -32,6 +35,7 @@ import yaml
 
 ZENODO = "https://zenodo.org"
 ZENODO_SANDBOX = "https://sandbox.zenodo.org"
+REPO_URL = "https://github.com/leifdenby/mlwp-inference-container-anna"
 
 CREATORS = [
     {
@@ -88,8 +92,8 @@ def build_metadata(fp_zip):
 "{PAPER_TITLE}"</a>
 operationally from DMI's DINI forecasts (interior initial states) with DINI or
 IFS forecasts on the boundary, with the
-<a href="https://github.com/leifdenby/mlwm-deployment">mlwm-deployment</a>
-ANNA configuration.</p>
+<a href="{REPO_URL}">mlwp-inference-container-anna</a>
+repository.</p>
 
 <p><b>This package does not contain the model weights.</b> The checkpoint is the
 paper's published DANRA model, <a href="https://doi.org/{ckpt['doi']}">{ckpt['doi']}</a>
@@ -122,7 +126,7 @@ the 18014 ERA5 boundary grid points the model was trained with.</li>
 <a href="https://github.com/joeloskarsson/neural-lam-dev">
 joeloskarsson/neural-lam-dev</a>
 (research branch) and mllam-data-prep from sadamov/mllam-data-prep
-(building-ml-lams branch), as pinned in the mlwm-deployment ANNA configuration.</p>
+(building-ml-lams branch), as pinned in mlwp-inference-container-anna.</p>
 
 <p>Acknowledgements: the model, the training setup and the datastore
 configurations are from the work of all authors of the paper: Simon Adamov,
@@ -173,7 +177,7 @@ Schemm.</p>
                 "scheme": "url",
             },
             {
-                "identifier": "https://github.com/leifdenby/mlwm-deployment",
+                "identifier": REPO_URL,
                 "relation": "isCompiledBy",
                 "resource_type": "software",
                 "scheme": "url",

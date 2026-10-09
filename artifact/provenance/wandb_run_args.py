@@ -7,8 +7,8 @@ and the datastore config. Needs wandb access to the `jo-research-team`
 entity.
 
 Usage (from the repository root):
-    uv run --project configurations/ANNA --with wandb python \\
-        configurations/ANNA/inference-artifact/provenance/wandb_run_args.py \\
+    uv run --with wandb python \\
+        artifact/provenance/wandb_run_args.py \\
         jo-research-team/neural_lam/hfzfhiha
 """
 import argparse

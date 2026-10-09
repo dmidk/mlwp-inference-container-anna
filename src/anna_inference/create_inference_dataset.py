@@ -32,7 +32,7 @@ NB: mllam-data-prep configs must never be written with sorted keys, that
 would reorder inputs/variables and so the features the checkpoint expects.
 
 Usage:
-    python create_inference_dataset.py --artifact inference_artifact \\
+    python -m anna_inference.create_inference_dataset --artifact inference_artifact \\
         --interior-dir inference_workdir/inputs \\
         --boundary inference_workdir/inputs/boundary.zarr --boundary-source dini \\
         --analysis-time 2026-09-26T18:00 --forecast-duration PT18H \\
@@ -50,7 +50,11 @@ import numpy as np
 import xarray as xr
 import yaml
 from loguru import logger
-from model_configs import TRAINING_BOUNDARY_SOURCE, model_configs
+
+from anna_inference.model_configs import (
+    TRAINING_BOUNDARY_SOURCE,
+    model_configs,
+)
 
 # boundary sources ANNA can be run with operationally (configs/model.yaml
 # also has the ERA5 training config, for which there are no forecasts)
@@ -454,7 +458,7 @@ def main():
 
 
 if __name__ == "__main__":
-    if os.getenv("MLWM_DEBUGGER", "") == "ipdb":
+    if os.getenv("ANNA_DEBUGGER", "") == "ipdb":
         import ipdb
 
         with ipdb.launch_ipdb_on_exception():

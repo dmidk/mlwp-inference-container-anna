@@ -1,5 +1,5 @@
 {
-  "name": "mlwm-dev",
+  "name": "mlwp-inference-container-anna",
   "dockerComposeFile": [
     "../docker-compose.dev.yml"
   ],

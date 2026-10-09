@@ -5,9 +5,9 @@ directory), has its contents at the zip root, and no text file in it
 mentions local or HPC paths or gefion-1 files.
 
 Usage (from the repository root):
-    uv run --project configurations/ANNA python \\
-        configurations/ANNA/inference-artifact/provenance/check_package.py \\
-        configurations/ANNA/inference-artifact/build/<artifact-name>.zip
+    uv run python \\
+        artifact/provenance/check_package.py \\
+        artifact/build/<artifact-name>.zip
 """
 import argparse
 import hashlib

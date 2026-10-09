@@ -2,20 +2,20 @@
 # Run an ANNA forecast (the DANRA ML LAM model of arXiv:2504.09340, see
 # configs/model.yaml) from a DINI control forecast.
 #
-# Intended to be run in the container, where the inference artifact (see
-# inference-artifact/README.md) is in ./inference_artifact. It can also be run
-# outside the container in the ANNA uv environment, with
-# INFERENCE_ARTIFACT_PATH=inference-artifact/build/<artifact-name>.
+# Intended to be run in the container (as /workspace/entry.sh), where the
+# inference artifact (see artifact/README.md) is in ./inference_artifact. It
+# can also be run outside the container in the uv environment of this
+# repository, with INFERENCE_ARTIFACT_PATH=artifact/build/<artifact-name>.
 #
-# Steps (see INFERENCE_PLAN.md):
+# Steps (see HISTORY.md):
 #   1. regrid DINI to the DANRA grid (interior) and, for the DINI boundary,
-#      to the 0.25 deg ERA5 boundary box     (src/regrid_dini.py)
+#      to the 0.25 deg ERA5 boundary box     (anna_inference.regrid_dini)
 #   2. create the inference datastores and neural-lam config
-#                                            (src/create_inference_dataset.py)
+#                                     (anna_inference.create_inference_dataset)
 #   3. build the model's graph               (neural_lam.build_rectangular_graph)
 #   4. run the forecast                      (neural_lam.train_model --eval)
 #   5. convert the prediction to DANRA-like single/pressure level zarr datasets
-#                                            (src/convert_output.py)
+#                                            (anna_inference.convert_output)
 #
 # Configuration through environment variables:
 #   ANALYSIS_TIME      analysis time of the DINI forecast, ISO8601, e.g.
@@ -31,7 +31,7 @@
 #   IFS_BOUNDARY_PATH  IFS forecast zarr (required for BOUNDARY_SOURCE=ifs)
 #   INFERENCE_WORKDIR  working directory (default ./inference_workdir)
 #   INFERENCE_ARTIFACT_PATH  inference artifact (default ./inference_artifact)
-#   MLWM_DEBUGGER      set to "ipdb" to debug the python steps on exceptions
+#   ANNA_DEBUGGER      set to "ipdb" to debug the python steps on exceptions
 #   SKIP_COMPLETED     "true" to skip the regridding, datastore and graph steps
 #                      that already completed in INFERENCE_WORKDIR (marked by
 #                      a `.completed` file), e.g. to rerun only the forecast.
@@ -47,12 +47,12 @@ if [ -f .env ] ; then
     set -a && source .env && set +a
 fi
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
 USE_UV=${USE_UV:-true}
 if [ "$USE_UV" = true ] ; then
-    # the ANNA project explicitly, as the forecast step runs in the workdir
-    PYTHON="uv run --project ${SCRIPT_DIR} python"
+    # this repository's project explicitly (entry.sh is in scripts/), as the
+    # forecast step runs in the workdir
+    REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+    PYTHON="uv run --project ${REPO_DIR} python"
 else
     PYTHON="python"
 fi
@@ -132,7 +132,7 @@ mark_completed() {
 ## 1. regrid DINI
 if ! completed "${WORKDIR}/inputs" "regridding" ; then
     rm -f "${WORKDIR}/inputs/.completed"
-    ${PYTHON} "${SCRIPT_DIR}/src/regrid_dini.py" regrid \
+    ${PYTHON} -m anna_inference.regrid_dini regrid \
         --dini-root "${DINI_ROOT}" \
         --danra-grid "${ARTIFACT}/grids/danra_model1_config.grid.zarr" \
         --forecast-duration "${FORECAST_DURATION}" \
@@ -144,7 +144,7 @@ fi
 ## 2. inference datastores and neural-lam config
 if ! completed "${WORKDIR}/datastores" "the inference datastores" ; then
     rm -f "${WORKDIR}/datastores/.completed"
-    ${PYTHON} "${SCRIPT_DIR}/src/create_inference_dataset.py" \
+    ${PYTHON} -m anna_inference.create_inference_dataset \
         --artifact "${ARTIFACT}" \
         --interior-dir "${WORKDIR}/inputs" \
         --boundary "${BOUNDARY_PATH}" \
@@ -221,7 +221,7 @@ if [ ! -d "${PREDICTION}" ] ; then
 fi
 
 ## 5. DANRA-like output datasets
-${PYTHON} "${SCRIPT_DIR}/src/convert_output.py" \
+${PYTHON} -m anna_inference.convert_output \
     --prediction "${PREDICTION}" \
     --danra-grid "${ARTIFACT}/grids/danra_model1_config.grid.zarr" \
     --interior-config "${ARTIFACT}/configs/danra_model1_config.yaml" \

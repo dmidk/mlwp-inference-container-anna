@@ -1,23 +1,27 @@
 #!/bin/bash
 
+# Build the ANNA inference image from the repository root (the build context),
+# wherever this script is called from
+cd "$(dirname "$0")/.." || exit 1
+
 # Container application (defuault to podman if not set)
 CONTAINER_APP=${CONTAINER_APP:-podman}
 
 # Configuration
-MLWM_LOG_LEVEL=DEBUG
-MLWM_IMAGE_NAME="anna:latest"
+ANNA_LOG_LEVEL=DEBUG
+ANNA_IMAGE_NAME=${ANNA_IMAGE_NAME:-"mlwp-inference-container-anna:latest"}
 
 HTTP_PROXY=""
 HTTPS_PROXY=""
 
-# Set MLWM_PULL_PROXY before running this script, e.g.:
-#   export MLWM_PULL_PROXY="your.proxy.server:port"
-if [ -z "$MLWM_PULL_PROXY" ]; then
-	echo "Info: MLWM_PULL_PROXY is not set. Using public DockerHub."
-	MLWM_PULL_PROXY=""
+# Set ANNA_PULL_PROXY before running this script, e.g.:
+#   export ANNA_PULL_PROXY="your.proxy.server:port"
+if [ -z "$ANNA_PULL_PROXY" ]; then
+	echo "Info: ANNA_PULL_PROXY is not set. Using public DockerHub."
+	ANNA_PULL_PROXY=""
     CR_URL="docker.io"
 else
-	echo "Info: Using proxy $MLWM_PULL_PROXY and internal DockerHub."
+	echo "Info: Using proxy $ANNA_PULL_PROXY and internal DockerHub."
     CR_URL="dockerhub.dmi.dk"
 fi
 
@@ -28,20 +32,20 @@ if [ "$(uname -m)" = "aarch64" ]; then
 	if [ -z "$CR_URL" ] || [ "$CR_URL" = "docker.io" ]; then
 		CR_URL="nvcr.io"
 	fi
-	MLWM_BASE_IMAGE="${CR_URL}/nvidia/pytorch:26.01-py3"
+	ANNA_BASE_IMAGE="${CR_URL}/nvidia/pytorch:26.01-py3"
 else
 	echo "Info: Using x86_64 base image."
-	MLWM_BASE_IMAGE="${CR_URL}/pytorch/pytorch:2.10.0-cuda13.0-cudnn9-runtime"
+	ANNA_BASE_IMAGE="${CR_URL}/pytorch/pytorch:2.10.0-cuda13.0-cudnn9-runtime"
 fi
 
 # Where the inference artifact comes from (see Containerfile): "local" uses the
 # package directory LOCAL_ARTIFACT_DIR assembled with
-# inference-artifact/assemble_artifact.py, "zenodo" downloads the published
+# anna_inference.artifact.assemble, "zenodo" downloads the published
 # inference package. The model checkpoint is downloaded from Zenodo during the
 # build in both cases (unless present).
 ARTIFACT_SOURCE=${ARTIFACT_SOURCE:-local}
-# relative to this directory (the build context)
-LOCAL_ARTIFACT_DIR=${LOCAL_ARTIFACT_DIR:-inference-artifact/build/anna-local}
+# relative to the repository root (the build context)
+LOCAL_ARTIFACT_DIR=${LOCAL_ARTIFACT_DIR:-artifact/build/anna-local}
 # published ANNA inference package on Zenodo (set once the record is published)
 PACKAGE_URL=${PACKAGE_URL:-}
 PACKAGE_MD5=${PACKAGE_MD5:-}
@@ -49,8 +53,8 @@ PACKAGE_MD5=${PACKAGE_MD5:-}
 if [ "$ARTIFACT_SOURCE" = "local" ]; then
 	if [ ! -f "${LOCAL_ARTIFACT_DIR}/artifact.yaml" ]; then
 		echo "Error: ARTIFACT_SOURCE=local but ${LOCAL_ARTIFACT_DIR} hasn't been assembled."
-		echo "Create it with inference-artifact/assemble_artifact.py (see"
-		echo "inference-artifact/README.md), or set ARTIFACT_SOURCE=zenodo."
+		echo "Create it with anna_inference.artifact.assemble (see"
+		echo "artifact/README.md), or set ARTIFACT_SOURCE=zenodo."
 		exit 1
 	fi
 	if grep -q "boundary_stats_placeholder: true" "${LOCAL_ARTIFACT_DIR}/artifact.yaml"; then
@@ -69,16 +73,16 @@ else
 fi
 
 # Pull base image with proxy
-HTTP_PROXY="$MLWM_PULL_PROXY" HTTPS_PROXY="$MLWM_PULL_PROXY" ${CONTAINER_APP} --log-level="$MLWM_LOG_LEVEL" pull "$MLWM_BASE_IMAGE"
+HTTP_PROXY="$ANNA_PULL_PROXY" HTTPS_PROXY="$ANNA_PULL_PROXY" ${CONTAINER_APP} --log-level="$ANNA_LOG_LEVEL" pull "$ANNA_BASE_IMAGE"
 
 # Build image
-echo "Running ${CONTAINER_APP} build to create image $MLWM_IMAGE_NAME ..."
+echo "Running ${CONTAINER_APP} build to create image $ANNA_IMAGE_NAME ..."
 ${CONTAINER_APP} build \
-	--build-arg BASE_IMAGE="$MLWM_BASE_IMAGE" \
+	--build-arg BASE_IMAGE="$ANNA_BASE_IMAGE" \
 	--build-arg ARTIFACT_SOURCE="$ARTIFACT_SOURCE" \
 	--build-arg PACKAGE_URL="$PACKAGE_URL" \
 	--build-arg PACKAGE_MD5="$PACKAGE_MD5" \
 	--build-arg LOCAL_ARTIFACT_DIR="$LOCAL_ARTIFACT_DIR" \
-	-t "$MLWM_IMAGE_NAME" \
+	-t "$ANNA_IMAGE_NAME" \
 	-f Containerfile \
 	.

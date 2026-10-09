@@ -9,10 +9,9 @@ RUN apt-get update && apt-get install -y curl unzip git
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 ENV PATH="/root/.local/bin:$PATH"
 
-COPY pyproject.toml .
-COPY *.yaml ./
-COPY entry.sh ./
+COPY pyproject.toml README.md ./
 COPY src/ ./src
+COPY scripts/entry.sh ./entry.sh
 
 # export current torch version to constraints file
 RUN python -c 'import torch; print(f"torch=={torch.__version__}")' > constraints.txt
@@ -22,7 +21,7 @@ RUN uv pip install --break-system-packages --system --constraints constraints.tx
 RUN python -c 'import neural_lam; print(f"neural-lam=={neural_lam.__version__}")'
 
 # The inference artifact (configs, statistics, grids, model description, see
-# inference-artifact/README.md) comes from:
+# artifact/README.md) comes from:
 # - "local": the assembled package directory ${LOCAL_ARTIFACT_DIR} in the
 #   build context
 # - "zenodo": the published inference package ${PACKAGE_URL}, checked against
@@ -32,7 +31,7 @@ RUN python -c 'import neural_lam; print(f"neural-lam=={neural_lam.__version__}")
 ARG ARTIFACT_SOURCE="local"
 ARG PACKAGE_URL=""
 ARG PACKAGE_MD5=""
-ARG LOCAL_ARTIFACT_DIR="inference-artifact/build/anna-local"
+ARG LOCAL_ARTIFACT_DIR="artifact/build/anna-local"
 # ${LOCAL_ARTIFACT_DIR} must exist in the build context (build_image.sh
 # creates an empty one when ARTIFACT_SOURCE=zenodo)
 COPY ${LOCAL_ARTIFACT_DIR}/ /workspace/inference_artifact_local/
@@ -49,7 +48,7 @@ RUN if [ "$ARTIFACT_SOURCE" = "local" ] ; then \
     else \
         echo "unknown ARTIFACT_SOURCE=$ARTIFACT_SOURCE (local or zenodo)" && exit 1 ; \
     fi
-RUN python src/fetch_checkpoint.py /workspace/inference_artifact
+RUN python -m anna_inference.fetch_checkpoint /workspace/inference_artifact
 # List files in the inference artifact directory for verification
 RUN ls -la /workspace/inference_artifact
 

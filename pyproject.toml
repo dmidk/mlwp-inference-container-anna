@@ -1,8 +1,9 @@
 [project]
-name = "ANNA"
+name = "anna-inference"
 version = "0.1.0"
-description = "Add your description here"
+description = "Inference for ANNA, the DANRA ML limited-area weather model (arXiv:2504.09340), run from DINI forecasts, and the container image that runs it"
 readme = "README.md"
+license = "MIT"
 requires-python = ">=3.11"
 authors = [
     {name = "Leif Denby", email = "lcd@dmi.dk"},
@@ -24,6 +25,17 @@ dependencies = [
     "ipython>=8.37.0",
     "mllam-data-prep",
     "neural-lam",
+    # used directly; versions as resolved for neural-lam-dev / mllam-data-prep
+    "cartopy",
+    "isodate",
+    "loguru",
+    "numpy",
+    "pyproj",
+    "pyyaml",
+    "requests",
+    "scipy",
+    "torch",
+    "xarray",
 ]
 
 [dependency-groups]
@@ -32,8 +44,14 @@ dev = [
     "pytest>=8.3.5",
 ]
 
+[tool.setuptools.packages.find]
+where = ["src"]
+
 [tool.isort]
 profile = "black"
+# as black in .pre-commit-config.yaml (the black profile assumes 88)
+line_length = 79
+known_first_party = ["anna_inference"]
 
 [tool.uv]
 # Use exactly the mllam-data-prep ANNA was trained with:
@@ -53,6 +71,7 @@ override-dependencies = [
 # research commits add git submodule entries without a .gitmodules url, which
 # breaks installing from git (and only change plotting code in neural_lam/)
 neural-lam = { git = "https://github.com/joeloskarsson/neural-lam-dev", rev = "a44d432e" }
+
 [build-system]
-requires = ["setuptools>=61", "setuptools_scm"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"

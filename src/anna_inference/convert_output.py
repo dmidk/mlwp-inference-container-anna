@@ -25,7 +25,7 @@ without it they take x/y for lon/lat in degrees. NB: DANRA's own
 instead of 25), so it isn't copied.
 
 Usage:
-    python convert_output.py --prediction inference_output.zarr \\
+    python -m anna_inference.convert_output --prediction inference_output.zarr \\
         --danra-grid inference_artifact/grids/danra_model1_config.grid.zarr \\
         --interior-config inference_artifact/configs/danra_model1_config.yaml \\
         --analysis-time 2026-10-01T00:00 --output-dir outputs/

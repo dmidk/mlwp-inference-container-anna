@@ -40,12 +40,12 @@ The package's version, creation time and provenance are recorded in
 
 ## Using it
 
-The package is made for the ANNA configuration of
-[mlwm-deployment](https://github.com/leifdenby/mlwm-deployment)
-(`configurations/ANNA`). Its container build downloads this package and the
-checkpoint. Its `entry.sh` regrids DINI, creates the inference datastores
-from these configs, builds the graph, runs the forecast and converts the
-output.
+The package is made for
+[mlwp-inference-container-anna](https://github.com/leifdenby/mlwp-inference-container-anna),
+which builds ANNA's inference container images. Its container build downloads
+this package and the checkpoint. Its `entry.sh` regrids DINI, creates the
+inference datastores from these configs, builds the graph, runs the forecast
+and converts the output.
 
 Software as used in training:
 - neural-lam from
@@ -54,7 +54,8 @@ Software as used in training:
 - mllam-data-prep from `sadamov/mllam-data-prep` (`building-ml-lams` branch);
 - zarr 2.
 
-Exact pins are in `configurations/ANNA/pyproject.toml` of mlwm-deployment.
+Exact pins are in `pyproject.toml` and `uv.lock` of
+mlwp-inference-container-anna.
 
 Conventions of the model's inputs and outputs (those of DANRA):
 

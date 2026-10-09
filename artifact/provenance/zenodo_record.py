@@ -6,8 +6,8 @@ creators, file md5) that `configs/model.yaml` and the inference package
 record (`zenodo_draft.py`) refer to.
 
 Usage (from the repository root):
-    uv run --project configurations/ANNA python \\
-        configurations/ANNA/inference-artifact/provenance/zenodo_record.py \\
+    uv run python \\
+        artifact/provenance/zenodo_record.py \\
         15131838
 """
 import argparse
