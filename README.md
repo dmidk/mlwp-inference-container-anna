@@ -172,6 +172,12 @@ In both cases the model checkpoint is downloaded from Zenodo during the build
 (md5-checked) if it isn't already there. No AWS credentials are needed. Set
 `ANNA_PULL_PROXY` to pull the base image through DMI's proxy.
 
+CI ([container-image.yml](.github/workflows/container-image.yml)) builds
+the x86_64 image from the Zenodo package on every push and pull request.
+Tags `v*` also publish it as
+`ghcr.io/leifdenby/mlwp-inference-container-anna:<tag>` and `:latest`. The
+build fails until the Zenodo record is published.
+
 ## Running a forecast
 
 [scripts/entry.sh](scripts/entry.sh) runs the whole pipeline:

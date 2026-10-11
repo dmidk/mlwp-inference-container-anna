@@ -1,0 +1,116 @@
+# Build the inference image (x86_64) on every push and pull request, and
+# publish it to ghcr.io for `v*` tags (as `<tag>` and `latest`).
+#
+# The inference package comes from Zenodo record 23293148 (the PACKAGE_URL
+# and PACKAGE_MD5 defaults in the Containerfile, also in
+# scripts/build_image.sh). Its files can't be downloaded while the record is
+# a draft, so the build fails until it's published.
+name: Build Container
+
+on:
+  push:
+    branches:
+      - "**"
+    tags:
+      - "v*"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner }}/mlwp-inference-container-anna
+
+jobs:
+  build:
+    name: Build image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - &free-disk-space
+        name: Free disk space (the base image is large)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: true
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          swap-storage: true
+
+      - &prepare-context
+        name: Prepare the build context
+        # The Containerfile always copies LOCAL_ARTIFACT_DIR: an empty
+        # directory with ARTIFACT_SOURCE=zenodo. Check that the package can
+        # be downloaded, which it can't while the Zenodo record is a draft.
+        run: |
+          mkdir -p artifact/build/.empty
+          url=$(sed -n 's/^ARG PACKAGE_URL="\(.*\)"$/\1/p' Containerfile)
+          if ! curl -sfIL -o /dev/null "$url"; then
+            echo "::error::can't download the inference package $url" \
+              "(is the Zenodo record published?)"
+            exit 1
+          fi
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./Containerfile
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  publish:
+    name: Publish image
+    needs: build
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - *free-disk-space
+
+      - *prepare-context
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract image metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=ref,event=tag
+            type=raw,value=latest
+
+      - name: Build and push image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./Containerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
