@@ -188,9 +188,15 @@ ZENODO_TOKEN=... uv run python -m anna_inference.artifact.zenodo_draft \
     --zip artifact/build/anna-danra-2026-10-06.zip
 ```
 
-After publishing, set `PACKAGE_URL`/`PACKAGE_MD5` in
-[`../scripts/build_image.sh`](../scripts/build_image.sh) (and mention the
-record in [`../README.md`](../README.md)).
+The draft's file URL and md5 go into `PACKAGE_URL`/`PACKAGE_MD5` in
+[`../scripts/build_image.sh`](../scripts/build_image.sh) and the
+Containerfile, and the record goes into [`../README.md`](../README.md).
+The image builds from it once the record is published.
+
+**Current draft (2026-10-11):** deposition
+[23293148](https://zenodo.org/deposit/23293148), reserved DOI
+`10.5281/zenodo.23293148`, `anna-danra-2026-10-11.zip`, md5
+`0eaad58528c52c0c7266126f8b321731`. Not published.
 
 ## gefion-1: a prior, incorrect inference artifact
 

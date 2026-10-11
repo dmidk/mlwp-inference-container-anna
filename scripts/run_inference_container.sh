@@ -19,6 +19,7 @@
 #   DINI_ROOT          DINI forecast zarrs (default: entry.sh's, on S3)
 #   SKIP_COMPLETED     true: reuse completed stages in INFERENCE_WORKDIR
 #   ANNA_DEBUGGER      ipdb: debug the python steps (interactive)
+#   OUTPUT_S3_PREFIX   also upload the outputs to S3 (see entry.sh)
 #
 # AWS credentials for reading DINI (and IFS) from S3 are passed at run time,
 # never baked into the image: AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY
@@ -62,7 +63,7 @@ ARGS+=(-e ANALYSIS_TIME="${ANALYSIS_TIME}")
 ARGS+=(-e FORECAST_DURATION="${FORECAST_DURATION}")
 ARGS+=(-e BOUNDARY_SOURCE="${BOUNDARY_SOURCE}")
 ARGS+=(-e INFERENCE_WORKDIR=/workspace/inference_workdir)
-for var in DINI_ROOT SKIP_COMPLETED ANNA_DEBUGGER ; do
+for var in DINI_ROOT SKIP_COMPLETED ANNA_DEBUGGER OUTPUT_S3_PREFIX ; do
     if [ -n "${!var:-}" ] ; then
         ARGS+=(-e "${var}=${!var}")
     fi

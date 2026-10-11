@@ -119,7 +119,10 @@ fact: the boundary configs, statistics and grid were missing (see
 
 The checkpoint is already public (Zenodo 15131838), so it isn't re-published.
 The artifact is therefore published **without the checkpoint**, as the
-*inference package* zip on Zenodo (record to be added once published).
+*inference package* zip on Zenodo: record
+[23293148](https://zenodo.org/records/23293148) (DOI
+`10.5281/zenodo.23293148`, `anna-danra-2026-10-11.zip`). As of 2026-10-11
+this is a **draft**, which can't be downloaded until it's published.
 
 The container build puts the two back together:
 - it fetches the package, or uses a locally built one;
@@ -140,10 +143,11 @@ CONTAINER_APP=podman scripts/build_image.sh
 
 The image is tagged `mlwp-inference-container-anna:latest` (`ANNA_IMAGE_NAME`).
 
-- `ARTIFACT_SOURCE=local` (default) uses a locally built artifact directory,
+- `ARTIFACT_SOURCE=zenodo` (default) downloads the published inference package
+  (`PACKAGE_URL`/`PACKAGE_MD5`, default Zenodo record 23293148). The script
+  checks first that it can be downloaded, i.e. that the record is published.
+- `ARTIFACT_SOURCE=local` uses a locally built artifact directory,
   `LOCAL_ARTIFACT_DIR` (default `artifact/build/anna-local`).
-- `ARTIFACT_SOURCE=zenodo` downloads the published package (`PACKAGE_URL`,
-  `PACKAGE_MD5`).
 
 In both cases the model checkpoint is downloaded from Zenodo during the build
 (md5-checked) if it isn't already there. No AWS credentials are needed. Set
@@ -175,6 +179,7 @@ It's configured through environment variables:
 | `INFERENCE_ARTIFACT_PATH` | `./inference_artifact` | the inference artifact (with checkpoint); outside the container e.g. `artifact/build/<name>` |
 | `ANNA_DEBUGGER` | | `ipdb` to debug the python steps on exceptions |
 | `SKIP_COMPLETED` | `false` | `true` skips the stages already completed in the workdir (e.g. rerun only the forecast) |
+| `OUTPUT_S3_PREFIX` | | if set (e.g. `s3://anna-forecasts/`), the outputs are also uploaded to `${OUTPUT_S3_PREFIX}/<analysis time>/` (e.g. `2026-10-01T000000Z/`), replacing an earlier upload for that analysis time, and checked after uploading |
 
 Outside the container, run it in the uv environment of this repository
 (`uv sync`), with AWS credentials for reading DINI (e.g. `AWS_PROFILE`):

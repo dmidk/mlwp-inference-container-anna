@@ -23,18 +23,19 @@ RUN python -c 'import importlib.metadata as md, neural_lam, torch; print("neural
 
 # The inference artifact (configs, statistics, grids, model description, see
 # artifact/README.md) comes from:
+# - "zenodo" (default): the published inference package ${PACKAGE_URL},
+#   checked against ${PACKAGE_MD5} (Zenodo record 23293148)
 # - "local": the assembled package directory ${LOCAL_ARTIFACT_DIR} in the
 #   build context
-# - "zenodo": the published inference package ${PACKAGE_URL}, checked against
-#   ${PACKAGE_MD5}
 # The model checkpoint is then downloaded (md5-checked) from Zenodo as given in
 # inference_artifact/configs/model.yaml, unless it's already there.
-ARG ARTIFACT_SOURCE="local"
-ARG PACKAGE_URL=""
-ARG PACKAGE_MD5=""
-ARG LOCAL_ARTIFACT_DIR="artifact/build/anna-local"
-# ${LOCAL_ARTIFACT_DIR} must exist in the build context (build_image.sh
-# creates an empty one when ARTIFACT_SOURCE=zenodo)
+ARG ARTIFACT_SOURCE="zenodo"
+ARG PACKAGE_URL="https://zenodo.org/records/23293148/files/anna-danra-2026-10-11.zip?download=1"
+ARG PACKAGE_MD5="0eaad58528c52c0c7266126f8b321731"
+ARG LOCAL_ARTIFACT_DIR="artifact/build/.empty"
+# ${LOCAL_ARTIFACT_DIR} must exist in the build context: build_image.sh
+# creates an empty one for ARTIFACT_SOURCE=zenodo (so no local package ends
+# up in an image layer)
 COPY ${LOCAL_ARTIFACT_DIR}/ /workspace/inference_artifact_local/
 RUN if [ "$ARTIFACT_SOURCE" = "local" ] ; then \
         mv /workspace/inference_artifact_local /workspace/inference_artifact ; \

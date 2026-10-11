@@ -37,6 +37,10 @@
 #                      a `.completed` file), e.g. to rerun only the forecast.
 #                      Only use with the same ANALYSIS_TIME, FORECAST_DURATION
 #                      and BOUNDARY_SOURCE as the completed run
+#   OUTPUT_S3_PREFIX   if set (e.g. s3://anna-forecasts/), also upload the
+#                      outputs to ${OUTPUT_S3_PREFIX}/{analysis}/, replacing
+#                      an earlier upload for the same analysis time
+#                      (anna_inference.upload_outputs)
 #
 # Outputs: ${INFERENCE_WORKDIR}/outputs/{single_levels,pressure_levels}.zarr
 
@@ -227,5 +231,13 @@ ${PYTHON} -m anna_inference.convert_output \
     --interior-config "${ARTIFACT}/configs/danra_model1_config.yaml" \
     --analysis-time "${ANALYSIS_ISO}" \
     --output-dir "${WORKDIR}/outputs"
+
+## 6. optionally, upload the outputs to S3
+if [ -n "${OUTPUT_S3_PREFIX:-}" ] ; then
+    ${PYTHON} -m anna_inference.upload_outputs \
+        --outputs "${WORKDIR}/outputs" \
+        --analysis-time "${ANALYSIS_ISO}" \
+        --prefix "${OUTPUT_S3_PREFIX}"
+fi
 
 echo "ANNA forecast done: ${WORKDIR}/outputs/{single_levels,pressure_levels}.zarr"

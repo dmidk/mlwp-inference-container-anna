@@ -1,20 +1,23 @@
 # Build the inference image (x86_64) from the published inference package
 # on Zenodo, and push it to ghcr.io when run on main.
 #
-# Manual only for now: the package isn't published yet. Once it is, set
-# PACKAGE_URL/PACKAGE_MD5 in scripts/build_image.sh and the defaults below,
-# and add `push: branches: [main]` to build on every push to main.
+# The package is Zenodo record 23293148 (PACKAGE_URL/PACKAGE_MD5 defaults in
+# scripts/build_image.sh); the inputs override it. Manual only until the
+# record is published (a draft's files can't be downloaded); then add
+# `push: branches: [main]` to build on every push to main.
 name: Build and publish the inference image
 
 on:
   workflow_dispatch:
     inputs:
       package_url:
-        description: "URL of the published inference package zip (Zenodo)"
-        required: true
+        description: "URL of the inference package zip (default: build_image.sh's)"
+        required: false
+        default: ""
       package_md5:
-        description: "md5 of the package zip"
-        required: true
+        description: "md5 of the package zip (default: build_image.sh's)"
+        required: false
+        default: ""
 
 env:
   IMAGE: ghcr.io/${{ github.repository_owner }}/mlwp-inference-container-anna
