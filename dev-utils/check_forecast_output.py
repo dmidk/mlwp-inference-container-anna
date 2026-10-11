@@ -1,7 +1,8 @@
 """
-Sanity-check an ANNA forecast written by `entry.sh`: the valid times, that
-all values are finite and within physical ranges, and how far the forecast
-is from the DINI forecast it was started from (regridded to the DANRA grid,
+Sanity-check an ANNA forecast written by `python -m anna_inference`: the
+valid times, that all values are finite and within physical ranges, and how
+far the forecast is from the DINI forecast it was started from (regridded
+to the DANRA grid,
 `inputs/interior_*_levels.zarr` in the workdir) at the same valid times.
 
 ANNA and DINI are both forecasts, so they differ, but after a few hours the

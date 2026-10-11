@@ -8,20 +8,20 @@ cd "$(dirname "$0")/.." || exit 1
 CONTAINER_APP=${CONTAINER_APP:-podman}
 
 # Configuration
-ANNA_LOG_LEVEL=DEBUG
-ANNA_IMAGE_NAME=${ANNA_IMAGE_NAME:-"mlwp-inference-container-anna:latest"}
+BUILD_LOG_LEVEL=DEBUG
+IMAGE_NAME=${IMAGE_NAME:-"mlwp-inference-container-anna:latest"}
 
 HTTP_PROXY=""
 HTTPS_PROXY=""
 
-# Set ANNA_PULL_PROXY before running this script, e.g.:
-#   export ANNA_PULL_PROXY="your.proxy.server:port"
-if [ -z "$ANNA_PULL_PROXY" ]; then
-	echo "Info: ANNA_PULL_PROXY is not set. Using public DockerHub."
-	ANNA_PULL_PROXY=""
+# Set PULL_PROXY before running this script, e.g.:
+#   export PULL_PROXY="your.proxy.server:port"
+if [ -z "$PULL_PROXY" ]; then
+	echo "Info: PULL_PROXY is not set. Using public DockerHub."
+	PULL_PROXY=""
     CR_URL="docker.io"
 else
-	echo "Info: Using proxy $ANNA_PULL_PROXY and internal DockerHub."
+	echo "Info: Using proxy $PULL_PROXY and internal DockerHub."
     CR_URL="dockerhub.dmi.dk"
 fi
 
@@ -32,10 +32,10 @@ if [ "$(uname -m)" = "aarch64" ]; then
 	if [ -z "$CR_URL" ] || [ "$CR_URL" = "docker.io" ]; then
 		CR_URL="nvcr.io"
 	fi
-	ANNA_BASE_IMAGE="${CR_URL}/nvidia/pytorch:26.01-py3"
+	BASE_IMAGE="${CR_URL}/nvidia/pytorch:26.01-py3"
 else
 	echo "Info: Using x86_64 base image."
-	ANNA_BASE_IMAGE="${CR_URL}/pytorch/pytorch:2.10.0-cuda13.0-cudnn9-runtime"
+	BASE_IMAGE="${CR_URL}/pytorch/pytorch:2.10.0-cuda13.0-cudnn9-runtime"
 fi
 
 # Where the inference artifact comes from (see Containerfile):
@@ -85,16 +85,16 @@ else
 fi
 
 # Pull base image with proxy
-HTTP_PROXY="$ANNA_PULL_PROXY" HTTPS_PROXY="$ANNA_PULL_PROXY" ${CONTAINER_APP} --log-level="$ANNA_LOG_LEVEL" pull "$ANNA_BASE_IMAGE"
+HTTP_PROXY="$PULL_PROXY" HTTPS_PROXY="$PULL_PROXY" ${CONTAINER_APP} --log-level="$BUILD_LOG_LEVEL" pull "$BASE_IMAGE"
 
 # Build image
-echo "Running ${CONTAINER_APP} build to create image $ANNA_IMAGE_NAME ..."
+echo "Running ${CONTAINER_APP} build to create image $IMAGE_NAME ..."
 ${CONTAINER_APP} build \
-	--build-arg BASE_IMAGE="$ANNA_BASE_IMAGE" \
+	--build-arg BASE_IMAGE="$BASE_IMAGE" \
 	--build-arg ARTIFACT_SOURCE="$ARTIFACT_SOURCE" \
 	--build-arg PACKAGE_URL="$PACKAGE_URL" \
 	--build-arg PACKAGE_MD5="$PACKAGE_MD5" \
 	--build-arg LOCAL_ARTIFACT_DIR="$LOCAL_ARTIFACT_DIR" \
-	-t "$ANNA_IMAGE_NAME" \
+	-t "$IMAGE_NAME" \
 	-f Containerfile \
 	.

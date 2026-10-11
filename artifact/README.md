@@ -150,7 +150,7 @@ uv run --with truststore python -c \
 
 - Add `--fetch-checkpoint` to also download `danra_model.ckpt` (md5-checked)
   into the package directory for local runs, e.g. with
-  `INFERENCE_ARTIFACT_PATH=artifact/build/<name> scripts/entry.sh` or
+  `uv run python -m anna_inference --artifact-path artifact/build/<name>` or
   `LOCAL_ARTIFACT_DIR=artifact/build/<name> scripts/build_image.sh`. The
   local container build defaults to `artifact/build/anna-local`.
 - The checkpoint is never put in the zip.

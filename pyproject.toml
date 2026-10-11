@@ -38,6 +38,9 @@ dependencies = [
     "xarray",
 ]
 
+[project.scripts]
+anna-inference = "anna_inference.run:main"
+
 [dependency-groups]
 dev = [
     "pre-commit>=4.2.0",

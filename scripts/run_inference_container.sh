@@ -2,24 +2,24 @@
 # Run an ANNA forecast in the inference image (built with build_image.sh).
 #
 # Usage:
-#   scripts/run_inference_container.sh <ANALYSIS_TIME> [<FORECAST_DURATION>]
+#   scripts/run_inference_container.sh [<ANALYSIS_TIME> [<FORECAST_DURATION>]] [<option>...]
 #
-#   ANALYSIS_TIME      DINI analysis time, ISO8601 (e.g. 2026-10-01T00:00Z)
+#   ANALYSIS_TIME      DINI analysis time, ISO8601 (e.g. 2026-10-01T00:00Z),
+#                      or ANNA_ANALYSIS_TIME
 #   FORECAST_DURATION  ISO8601 duration, PT12H .. PT30H (default PT18H)
+#   <option>...        further options of the entrypoint (see README.md, or
+#                      `python -m anna_inference --help`)
 #
-# Optional environment variables (see scripts/entry.sh for the pipeline):
+# The forecast is configured as outside the container: every set ANNA_*
+# variable (README.md) is passed into the container. Except:
+#   ANNA_WORKDIR       the host directory for the inputs and outputs (default
+#                      ./inference_workdir), mounted as the container's
+#                      workdir; the forecast is written to outputs/ in it
+#   ANNA_IFS_BOUNDARY_PATH  a local IFS zarr is mounted read-only at the same
+#                      path
+# Settings of this script:
 #   CONTAINER_APP      podman (default) or docker
-#   ANNA_IMAGE_NAME    image (default mlwp-inference-container-anna:latest)
-#   INFERENCE_WORKDIR  host directory for inputs and outputs, mounted into
-#                      the container (default ./inference_workdir); the
-#                      forecast is written to outputs/ in it
-#   BOUNDARY_SOURCE    dini (default) or ifs
-#   IFS_BOUNDARY_PATH  IFS forecast zarr for BOUNDARY_SOURCE=ifs (an s3://
-#                      URL, or a local path, which is mounted read-only)
-#   DINI_ROOT          DINI forecast zarrs (default: entry.sh's, on S3)
-#   SKIP_COMPLETED     true: reuse completed stages in INFERENCE_WORKDIR
-#   ANNA_DEBUGGER      ipdb: debug the python steps (interactive)
-#   OUTPUT_S3_PREFIX   also upload the outputs to S3 (see entry.sh)
+#   IMAGE_NAME         image (default mlwp-inference-container-anna:latest)
 #
 # AWS credentials for reading DINI (and IFS) from S3 are passed at run time,
 # never baked into the image: AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY
@@ -27,24 +27,27 @@
 
 set -euo pipefail
 
-if [ "$#" -lt 1 ] || [ "$#" -gt 2 ] ; then
-    sed -n '4,8p' "$0" | sed 's/^# \{0,1\}//' >&2
-    exit 1
+CLI_ARGS=()
+if [ "$#" -ge 1 ] && [[ "$1" != -* ]] ; then
+    CLI_ARGS+=(--analysis-time "$1")
+    shift
+    if [ "$#" -ge 1 ] && [[ "$1" != -* ]] ; then
+        CLI_ARGS+=(--forecast-duration "$1")
+        shift
+    fi
 fi
-ANALYSIS_TIME="$1"
-FORECAST_DURATION="${2:-PT18H}"
+CLI_ARGS+=("$@")
 
 CONTAINER_APP=${CONTAINER_APP:-podman}
-ANNA_IMAGE_NAME=${ANNA_IMAGE_NAME:-mlwp-inference-container-anna:latest}
-INFERENCE_WORKDIR=${INFERENCE_WORKDIR:-./inference_workdir}
-BOUNDARY_SOURCE=${BOUNDARY_SOURCE:-dini}
-mkdir -p "${INFERENCE_WORKDIR}"
-INFERENCE_WORKDIR="$(cd "${INFERENCE_WORKDIR}" && pwd)"
+IMAGE_NAME=${IMAGE_NAME:-mlwp-inference-container-anna:latest}
+HOST_WORKDIR=${ANNA_WORKDIR:-./inference_workdir}
+mkdir -p "${HOST_WORKDIR}"
+HOST_WORKDIR="$(cd "${HOST_WORKDIR}" && pwd)"
 
 ARGS=(--rm --shm-size=32g)
 if [ "${CONTAINER_APP}" = "docker" ] ; then
-    # run as the calling user, so the outputs in INFERENCE_WORKDIR are
-    # theirs (rootless podman maps the container's root to the user already).
+    # run as the calling user, so the outputs in the workdir are theirs
+    # (rootless podman maps the container's root to the user already).
     # The uid has no passwd entry in the image: USER/LOGNAME are what
     # getpass.getuser() (e.g. torch's compile cache) reads first
     CONTAINER_HOME=/tmp
@@ -54,28 +57,29 @@ else
     CONTAINER_HOME=/root
     ARGS+=(--device nvidia.com/gpu=all)
 fi
-if [ "${ANNA_DEBUGGER:-}" = "ipdb" ] ; then
+if [ -n "${ANNA_DEBUGGER:-}" ] ; then
     ARGS+=(-it)
 fi
 
-ARGS+=(-v "${INFERENCE_WORKDIR}:/workspace/inference_workdir:Z")
-ARGS+=(-e ANALYSIS_TIME="${ANALYSIS_TIME}")
-ARGS+=(-e FORECAST_DURATION="${FORECAST_DURATION}")
-ARGS+=(-e BOUNDARY_SOURCE="${BOUNDARY_SOURCE}")
-ARGS+=(-e INFERENCE_WORKDIR=/workspace/inference_workdir)
-for var in DINI_ROOT SKIP_COMPLETED ANNA_DEBUGGER OUTPUT_S3_PREFIX ; do
-    if [ -n "${!var:-}" ] ; then
-        ARGS+=(-e "${var}=${!var}")
-    fi
-done
+# the workdir is the container's default, /workspace/inference_workdir
+ARGS+=(-v "${HOST_WORKDIR}:/workspace/inference_workdir:Z")
 
-if [ -n "${IFS_BOUNDARY_PATH:-}" ] ; then
-    if [ -e "${IFS_BOUNDARY_PATH}" ] ; then
-        # a local zarr: mount it at the same path
-        IFS_BOUNDARY_PATH="$(cd "${IFS_BOUNDARY_PATH}" && pwd)"
-        ARGS+=(-v "${IFS_BOUNDARY_PATH}:${IFS_BOUNDARY_PATH}:ro,Z")
+# the ANNA_* variables (the forecast's configuration)
+while IFS= read -r var ; do
+    case "${var}" in
+        ANNA_WORKDIR|ANNA_IFS_BOUNDARY_PATH) ;;
+        ANNA_*) ARGS+=(-e "${var}=${!var}") ;;
+    esac
+done < <(compgen -e)
+
+if [ -n "${ANNA_IFS_BOUNDARY_PATH:-}" ] ; then
+    IFS_PATH="${ANNA_IFS_BOUNDARY_PATH}"
+    if [ -e "${IFS_PATH}" ] ; then
+        # a local zarr: mount it at the same (absolute) path
+        IFS_PATH="$(cd "${IFS_PATH}" && pwd)"
+        ARGS+=(-v "${IFS_PATH}:${IFS_PATH}:ro,Z")
     fi
-    ARGS+=(-e IFS_BOUNDARY_PATH="${IFS_BOUNDARY_PATH}")
+    ARGS+=(-e ANNA_IFS_BOUNDARY_PATH="${IFS_PATH}")
 fi
 
 # AWS credentials, at run time only
@@ -89,6 +93,5 @@ if [ -d "${HOME}/.aws" ] ; then
     ARGS+=(-v "${HOME}/.aws:${CONTAINER_HOME}/.aws:ro,Z")
 fi
 
-echo "Running ${ANNA_IMAGE_NAME}: ${ANALYSIS_TIME} ${FORECAST_DURATION}" \
-    "(boundary ${BOUNDARY_SOURCE}), workdir ${INFERENCE_WORKDIR}"
-${CONTAINER_APP} run "${ARGS[@]}" "${ANNA_IMAGE_NAME}"
+echo "Running ${IMAGE_NAME} ${CLI_ARGS[*]-}, workdir ${HOST_WORKDIR}"
+${CONTAINER_APP} run "${ARGS[@]}" "${IMAGE_NAME}" ${CLI_ARGS[@]+"${CLI_ARGS[@]}"}

@@ -103,6 +103,11 @@ Both used the same `7deg_config.yaml` datastores, so the DANRA interior statisti
   - stats, grids and the checkpoint.
 
   The DINI/IFS boundary datastore configs moved into the package (`src/anna_inference/boundary/`, so into the image). The stored `7deg_config_{dini,ifs}.yaml` are gone: `model_configs.inference_neural_lam_config` derives the forecast's neural-lam config from the training one (the boundary datastore swapped, and `overload_stats_path` set to the ERA5 training config). The result is identical to the old files. The repo copies of the training configs moved from `configs/` to `artifact/configs/`. The Zenodo draft 23293148 was updated with the rebuilt package.
+- **Configuration through `ANNA_*` environment variables, every option overridable (user, 2026-10-11).** This follows [dmidk/dummy-mlwp-model](https://github.com/dmidk/dummy-mlwp-model), as a common setup for MLWP inference containers:
+  - `entry.sh` was replaced by a Python entrypoint, `python -m anna_inference` (`src/anna_inference/run.py`), with an argparse CLI. It runs the same steps as subprocesses.
+  - Every option `--some-option` can also be set with `ANNA_SOME_OPTION`; the command line wins over the variable, which wins over the default. The mapping is `src/anna_inference/envargs.py`, which is generic (standard library only), so other containers can reuse it with their own prefix.
+  - An unknown `ANNA_*` variable is an error (exit 2, with a "did you mean"). The run logs the effective configuration and where each value came from.
+  - The old unprefixed variables (`ANALYSIS_TIME`, `INFERENCE_WORKDIR`, ...) are gone, with no compatibility shim. The build and run scripts' own variables lost the `ANNA_` prefix (`IMAGE_NAME`, `PULL_PROXY`), so they don't count as forecast options.
 
 ## Steps
 

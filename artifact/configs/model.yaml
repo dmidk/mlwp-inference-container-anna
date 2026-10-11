@@ -3,7 +3,7 @@
 # Settings" (Adamov et al. 2025, arXiv:2504.09340), published on Zenodo.
 #
 # Part of the inference artifact, which describes the model as trained
-# (DANRA interior, ERA5 boundary). Read by scripts/entry.sh (graph,
+# (DANRA interior, ERA5 boundary). Read by anna_inference.run (graph,
 # train_model arguments, checkpoint), the Containerfile and
 # anna_inference.artifact (checkpoint download).
 

@@ -12,7 +12,7 @@ boundary forcing on a 7.19° ring around the DANRA domain.
 It holds everything needed for that, in one Python project
 ([pyproject.toml](pyproject.toml), exact environment in `uv.lock`):
 - the inference pipeline (`src/anna_inference/`, run by
-  [scripts/entry.sh](scripts/entry.sh), the image's entrypoint);
+  `python -m anna_inference`, the image's entrypoint);
 - the [Containerfile](Containerfile) and
   [scripts/build_image.sh](scripts/build_image.sh);
 - the tools that build the model's *inference artifact* (configs, training
@@ -32,7 +32,7 @@ history, decisions and the reasons behind them are in
 
 Described in [artifact/configs/model.yaml](artifact/configs/model.yaml)
 (checkpoint, graph recipe, neural-lam arguments, training neural-lam config),
-which is part of the inference artifact and is read by `entry.sh` and the
+which is part of the inference artifact and is read by the entrypoint and the
 container build.
 
 - Checkpoint: the paper's DANRA model, Zenodo
@@ -147,7 +147,7 @@ The container build puts the two back together:
 - it fetches the package, or uses a locally built one;
 - it downloads the checkpoint into it (md5-checked);
 - the result is the complete artifact at `/workspace/inference_artifact`,
-  which `entry.sh` reads (`INFERENCE_ARTIFACT_PATH`).
+  the entrypoint's default `--artifact-path`.
 
 How the artifact is built, checked and published, and its provenance, are in
 [artifact/README.md](artifact/README.md). That includes the superseded
@@ -160,7 +160,7 @@ the package is [artifact/package-README.md](artifact/package-README.md).
 CONTAINER_APP=podman scripts/build_image.sh
 ```
 
-The image is tagged `mlwp-inference-container-anna:latest` (`ANNA_IMAGE_NAME`).
+The image is tagged `mlwp-inference-container-anna:latest` (`IMAGE_NAME`).
 
 - `ARTIFACT_SOURCE=zenodo` (default) downloads the published inference package
   (`PACKAGE_URL`/`PACKAGE_MD5`, default Zenodo record 23293148). The script
@@ -170,7 +170,7 @@ The image is tagged `mlwp-inference-container-anna:latest` (`ANNA_IMAGE_NAME`).
 
 In both cases the model checkpoint is downloaded from Zenodo during the build
 (md5-checked) if it isn't already there. No AWS credentials are needed. Set
-`ANNA_PULL_PROXY` to pull the base image through DMI's proxy.
+`PULL_PROXY` to pull the base image through DMI's proxy.
 
 CI ([container-image.yml](.github/workflows/container-image.yml)) builds
 the x86_64 image from the Zenodo package on every push and pull request.
@@ -180,7 +180,9 @@ build fails until the Zenodo record is published.
 
 ## Running a forecast
 
-[scripts/entry.sh](scripts/entry.sh) runs the whole pipeline:
+`python -m anna_inference` (also installed as `anna-inference`, the image's
+entrypoint, [src/anna_inference/run.py](src/anna_inference/run.py)) runs
+the whole pipeline, each step as a subprocess:
 
 1. `anna_inference.regrid_dini`: DINI → DANRA grid (interior) and, for the
    DINI boundary, → the 0.25° ERA5 boundary box. Reads DINI concurrently
@@ -190,28 +192,57 @@ build fails until the Zenodo record is published.
 3. `neural_lam.build_rectangular_graph`: the model's graph (`model.yaml`)
 4. `neural_lam.train_model --eval test`: the forecast
 5. `anna_inference.convert_output`: DANRA-like output datasets
+6. `anna_inference.upload_outputs`: optionally, the upload to S3
 
-It's configured through environment variables:
+### Configuration
 
-| Variable | Default | |
-|---|---|---|
-| `ANALYSIS_TIME` | (required) | DINI analysis time, e.g. `2026-10-01T00:00Z`; 00/06/12/18 UTC with the DINI boundary |
-| `FORECAST_DURATION` | `PT18H` | multiple of 3 h, between 12 h (neural-lam needs that to load the model) and DINI forecast length − 6 h (30 h for a 36 h DINI run) |
-| `BOUNDARY_SOURCE` | `dini` | `dini` or `ifs` |
-| `DINI_ROOT` | `s3://harmonie-zarr/dini/control/{analysis}/` | DINI forecast zarrs |
-| `IFS_BOUNDARY_PATH` | | IFS forecast zarr, required for `BOUNDARY_SOURCE=ifs` |
-| `INFERENCE_WORKDIR` | `./inference_workdir` | |
-| `INFERENCE_ARTIFACT_PATH` | `./inference_artifact` | the inference artifact (with checkpoint); outside the container e.g. `artifact/build/<name>` |
-| `ANNA_DEBUGGER` | | `ipdb` to debug the python steps on exceptions |
-| `SKIP_COMPLETED` | `false` | `true` skips the stages already completed in the workdir (e.g. rerun only the forecast) |
-| `OUTPUT_S3_PREFIX` | | if set (e.g. `s3://anna-forecasts/`), the outputs are also uploaded to `${OUTPUT_S3_PREFIX}/<analysis time>/` (e.g. `2026-10-01T000000Z/`), replacing an earlier upload for that analysis time, and checked after uploading |
+Every command line option `--some-option` can also be set with the
+environment variable `ANNA_SOME_OPTION`. An option on the command line wins
+over its variable, which wins over the default:
+
+| Option | Environment variable | Default | |
+|---|---|---|---|
+| `--analysis-time` | `ANNA_ANALYSIS_TIME` | (required) | DINI analysis time, ISO8601, e.g. `2026-10-01T00:00Z` (UTC if no timezone); 00/06/12/18 UTC with the DINI boundary |
+| `--forecast-duration` | `ANNA_FORECAST_DURATION` | `PT18H` | multiple of 3 h, between 12 h (neural-lam needs that to load the model) and DINI forecast length − 6 h (30 h for a 36 h DINI run) |
+| `--boundary-source` | `ANNA_BOUNDARY_SOURCE` | `dini` | `dini` or `ifs` |
+| `--dini-root` | `ANNA_DINI_ROOT` | `s3://harmonie-zarr/dini/control/{analysis}/` | DINI forecast zarrs |
+| `--ifs-boundary-path` | `ANNA_IFS_BOUNDARY_PATH` | | IFS forecast zarr, required for `--boundary-source ifs` |
+| `--workdir` | `ANNA_WORKDIR` | `inference_workdir` | working directory, with the outputs in `outputs/` |
+| `--artifact-path` | `ANNA_ARTIFACT_PATH` | `inference_artifact` | the inference artifact (with checkpoint); outside the container e.g. `artifact/build/<name>` |
+| `--skip-completed` | `ANNA_SKIP_COMPLETED` | `false` | skip the stages already completed in the workdir (e.g. rerun only the forecast) |
+| `--output-s3-prefix` | `ANNA_OUTPUT_S3_PREFIX` | | if set (e.g. `s3://anna-forecasts/`), the outputs are also uploaded to `{prefix}/<analysis time>/` (e.g. `2026-10-01T000000Z/`), replacing an earlier upload for that analysis time, and checked after uploading |
+| `--debugger` | `ANNA_DEBUGGER` | | `ipdb` to debug the python steps on exceptions |
+| `--log-level` | `ANNA_LOG_LEVEL` | `INFO` | loguru level |
+
+- Flags take `true`/`false` (also `1`/`0`, `yes`/`no`) from their variable.
+- An empty variable counts as unset.
+- Variables in a `.env` file in the current directory are loaded too
+  (e.g. S3 credentials); variables already set win.
+- A set `ANNA_*` variable that matches no option is an error, so a
+  misspelling can't go unnoticed:
+  `unknown environment variable(s) ANNA_FORECAST_DURATON (did you mean ANNA_FORECAST_DURATION?)`.
+- Configuration errors exit with code 2, a failed step with 1.
+- The run starts by logging the version and the effective configuration:
+  every option with its variable name, value and where the value came from
+  (`cli`, `env` or `default`).
+
+The mapping between options and variables is done by
+[src/anna_inference/envargs.py](src/anna_inference/envargs.py). It has
+nothing ANNA-specific and only uses the standard library, so other MLWP
+inference containers can use the same convention with their own prefix.
+
+### Running it
 
 Outside the container, run it in the uv environment of this repository
 (`uv sync`), with AWS credentials for reading DINI (e.g. `AWS_PROFILE`):
 
 ```bash
-INFERENCE_ARTIFACT_PATH=artifact/build/anna-local \
-    ANALYSIS_TIME=2026-10-01T00:00Z FORECAST_DURATION=PT18H scripts/entry.sh
+uv run python -m anna_inference --artifact-path artifact/build/anna-local \
+    --analysis-time 2026-10-01T00:00Z --forecast-duration PT18H
+# or, equivalently
+ANNA_ARTIFACT_PATH=artifact/build/anna-local \
+    ANNA_ANALYSIS_TIME=2026-10-01T00:00Z ANNA_FORECAST_DURATION=PT18H \
+    uv run python -m anna_inference
 ```
 
 A 12 h forecast takes about 5 minutes on a DGX Spark (GB10 GPU), and needs
@@ -224,18 +255,31 @@ CONTAINER_APP=docker AWS_PROFILE=... \
     scripts/run_inference_container.sh 2026-10-01T00:00Z PT12H
 ```
 
-- It mounts `INFERENCE_WORKDIR` (default `./inference_workdir`) for the inputs
-  and outputs, and passes the variables above.
+- It passes every set `ANNA_*` variable to the container, and mounts the
+  host directory `ANNA_WORKDIR` (default `./inference_workdir`) as the
+  container's workdir, for the inputs and outputs.
 - AWS credentials are passed at run time (`AWS_*` variables and `~/.aws`,
   read-only), never built into the image.
 - With docker it runs as the calling user, so the outputs are yours.
+
+Or directly, with options as arguments after the image name or as `-e`
+variables:
+
+```bash
+docker run --rm --gpus all --shm-size=32g \
+    -v ~/.aws:/root/.aws:ro -e AWS_PROFILE=... \
+    -v $PWD/inference_workdir:/workspace/inference_workdir \
+    -e ANNA_ANALYSIS_TIME=2026-10-01T00:00Z \
+    -e ANNA_OUTPUT_S3_PREFIX=s3://anna-forecasts/ \
+    mlwp-inference-container-anna:latest --forecast-duration PT12H
+```
 
 The image gives the same forecast as the uv environment: identical outputs
 for DINI 2026-10-01T00Z PT12H, with the image's NVIDIA torch 2.10.
 
 ### Outputs and conventions
 
-`${INFERENCE_WORKDIR}/outputs/single_levels.zarr` (pres_seasurface, t2m, u10m,
+`<workdir>/outputs/single_levels.zarr` (pres_seasurface, t2m, u10m,
 v10m, pres0m, lwavr0m, swavr0m) and `pressure_levels.zarr` (z, t, r, u, v, tw
 at 100–1000 hPa) are on the DANRA grid at valid times T+6 h …
 T+`FORECAST_DURATION` in 3 h steps. The initial states are DINI at T+0 and

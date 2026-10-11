@@ -3,7 +3,7 @@ Check that neural-lam can build the forecast sample from the inference
 datastores written by `anna_inference.create_inference_dataset`.
 
 The test dataset is set up as `train_model --eval test` does it in
-`entry.sh` (`--ar_steps_eval` for the forecast duration, no init-time
+`anna_inference.run` (`--ar_steps_eval` for the forecast duration, no init-time
 filtering, no dynamic time deltas), and its single sample is checked:
 
 - exactly one sample, starting at the analysis time;
@@ -85,7 +85,7 @@ def main():
         config_path=str(args.workdir / "config.yaml")
     )
     ar_steps = ar_steps_for(args.forecast_duration)
-    # as train_model builds it for `--eval test` (see entry.sh)
+    # as train_model builds it for `--eval test` (see anna_inference.run)
     data_module = WeatherDataModule(
         datastore=datastore,
         datastore_boundary=datastore_boundary,

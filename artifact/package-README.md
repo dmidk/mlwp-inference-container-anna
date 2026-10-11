@@ -46,7 +46,7 @@ The package's version, creation time and provenance are recorded in
 The package is made for
 [mlwp-inference-container-anna](https://github.com/leifdenby/mlwp-inference-container-anna),
 which builds ANNA's inference container images. Its container build downloads
-this package and the checkpoint. Its `entry.sh` then:
+this package and the checkpoint. Its entrypoint (`python -m anna_inference`) then:
 - regrids DINI;
 - creates the inference datastores, from the training interior config and
   its own DINI/IFS boundary datastore configs;

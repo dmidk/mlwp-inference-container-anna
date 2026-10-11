@@ -11,7 +11,6 @@ ENV PATH="/root/.local/bin:$PATH"
 
 COPY pyproject.toml README.md ./
 COPY src/ ./src
-COPY scripts/entry.sh ./entry.sh
 
 # export current torch version to constraints file
 RUN python -c 'import torch; print(f"torch=={torch.__version__}")' > constraints.txt
@@ -54,10 +53,8 @@ RUN python -m anna_inference.fetch_checkpoint /workspace/inference_artifact
 # List files in the inference artifact directory for verification
 RUN ls -la /workspace/inference_artifact
 
-# inside the container we have installed directly into system python, so we
-# wont use uv here (otherwise uv tries to create a new virtual environment)
-ENV USE_UV="false"
-# Set the default command to run when the container starts
-ENTRYPOINT ["./entry.sh"]
-# No arguments passed by default
-CMD [""]
+# The forecast pipeline (see README.md): configured with ANNA_* environment
+# variables, or with options as arguments after the image name
+RUN python -m anna_inference --help > /dev/null
+ENTRYPOINT ["python", "-m", "anna_inference"]
+CMD []
