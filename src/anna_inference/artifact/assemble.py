@@ -1,9 +1,10 @@
 """
-Assemble the ANNA inference package: everything needed to run the paper's
-DANRA model (Zenodo 15131838, see `configs/model.yaml`) from DINI/IFS, except
-the model checkpoint itself, which is downloaded from Zenodo separately
-(`--fetch-checkpoint` for a local directory, the Containerfile for images).
-See README.md in this directory.
+Assemble the ANNA inference package: the paper's DANRA model as trained
+(Zenodo 15131838, see `artifact/configs/model.yaml`; DANRA interior, ERA5
+boundary), except the model checkpoint itself, which is downloaded from
+Zenodo separately (`--fetch-checkpoint` for a local directory, the
+Containerfile for images). The operational boundaries (DINI, IFS) are not
+part of it; they are in `anna_inference/boundary/`. See artifact/README.md.
 
 The interior statistics and the boundary grid of the datastores the model was
 trained with are taken from the (superseded) `gefion-1` inference artifact,
@@ -11,9 +12,10 @@ which was built from the same datastores; the ERA5 boundary statistics are
 computed with `anna_inference.artifact.era5_boundary_stats`. The package
 contains:
 
-    configs/                interior and boundary (ERA5/IFS/DINI) datastore
-                            configs, neural-lam configs and model.yaml (the
-                            model to run) from configs/ in this repository
+    configs/                the training neural-lam config, the interior
+                            (DANRA) and boundary (ERA5) datastore configs and
+                            model.yaml (the model), from artifact/configs/ in
+                            this repository
     configs/era_7deg_model1_config.zarr
                             ERA5 "stats datastore" that neural-lam opens via
                             `overload_stats_path` (statistics and splits only)
@@ -90,27 +92,16 @@ BOUNDARY_STATS_DESCRIPTION = (
 def _check_model_configs(configs_dir):
     """
     Check that the training datastores this package provides statistics and
-    grids for are the ones the configs use: the interior and boundary
-    datastores of the training (ERA5) neural-lam config named in model.yaml,
-    and the boundary statistics every boundary source is normalised with.
+    grids for (from gefion-1 and the ERA5 statistics) are the ones the
+    training neural-lam config named in model.yaml uses.
     """
-    training = mc.model_configs(configs_dir, mc.TRAINING_BOUNDARY_SOURCE)
+    training = mc.training_configs(configs_dir)
     names = dict(
         interior=(training.interior_datastore, INTERIOR_DATASTORE_NAME),
         boundary=(training.boundary_datastore, BOUNDARY_DATASTORE_NAME),
     )
-    for source in mc.boundary_sources(configs_dir):
-        configs = mc.model_configs(configs_dir, source)
-        names[f"{source} interior"] = (
-            configs.interior_datastore,
-            INTERIOR_DATASTORE_NAME,
-        )
-        names[f"{source} boundary statistics"] = (
-            configs.boundary_stats_datastore,
-            BOUNDARY_DATASTORE_NAME,
-        )
     for what, (fn_config, expected) in names.items():
-        if mc.ModelConfigs.name(fn_config) != expected:
+        if mc.TrainingConfigs.name(fn_config) != expected:
             raise SystemExit(
                 f"{what} datastore of the configs is {fn_config}, but this "
                 f"package provides the statistics and grids of {expected}"
@@ -241,7 +232,7 @@ def main():
         "artifact/build/<artifact-name>)",
     )
     parser.add_argument(
-        "--configs-dir", type=Path, default=REPO_DIR / "configs"
+        "--configs-dir", type=Path, default=REPO_DIR / "artifact" / "configs"
     )
     parser.add_argument(
         "--artifact-name",

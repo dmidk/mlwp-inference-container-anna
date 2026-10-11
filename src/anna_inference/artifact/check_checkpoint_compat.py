@@ -47,10 +47,7 @@ import pandas as pd  # noqa: E402
 import torch  # noqa: E402
 import xarray as xr  # noqa: E402
 
-from anna_inference.model_configs import (  # noqa: E402
-    TRAINING_BOUNDARY_SOURCE,
-    model_configs,
-)
+from anna_inference.model_configs import training_configs  # noqa: E402
 
 LEVELS = [100, 200, 400, 600, 700, 850, 925, 1000]
 INTERIOR_SL_VARS = [
@@ -239,7 +236,7 @@ def main():
     # three days: enough for complete 00/12 UTC samples after the interior
     # and (6-hourly) boundary data have been aligned
     # the training (ERA5 boundary) configs, as named in model.yaml
-    configs = model_configs(args.configs_dir, TRAINING_BOUNDARY_SOURCE)
+    configs = training_configs(args.configs_dir)
     times = pd.date_range("2000-01-01T00:00", "2000-01-04T00:00", freq="3h")
     lat2d, lon2d = _create_interior(
         args.configs_dir, configs.interior_datastore, workdir, times, rng

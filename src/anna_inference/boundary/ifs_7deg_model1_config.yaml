@@ -5,8 +5,11 @@
 # https://github.com/joeloskarsson/neural-lam-dev, which was written for this
 # model family. The IFS boundary uses the same features (same names, same
 # order) as the ERA5 boundary ANNA was trained with
-# (`era_7deg_model1_config.yaml`) and is normalised with the ERA5 training
-# statistics (`overload_stats_path` in `7deg_config_ifs.yaml`).
+# (`era_7deg_model1_config.yaml` in the inference artifact) and is normalised
+# with the ERA5 training statistics (`overload_stats_path` in the neural-lam
+# config derived from the training config at run time,
+# `anna_inference.model_configs`). Not part of the inference artifact: the
+# model was trained on ERA5 only.
 #
 # VALID-TIME LAYOUT: this config doesn't read the forecast zarr directly.
 # `anna_inference.create_inference_dataset` first turns the forecast (one cycle) into a

@@ -1,15 +1,18 @@
 """
 The layout of an ANNA inference artifact, shared by the tools that build it
 (`collect` on the training machine, `assemble` for the reconstruction from
-gefion-1) and by the checks:
+gefion-1) and by the checks. The artifact describes the model **as
+trained** (DANRA interior, ERA5 boundary), nothing about the operational
+boundaries (DINI, IFS), which are part of this package:
 
     configs/model.yaml              the model: checkpoint, graph recipe,
-                                    train_model arguments and the neural-lam
-                                    config per boundary source
-    configs/<neural-lam config>     one per boundary source (model.yaml), with
+                                    train_model arguments and the training
+                                    neural-lam config
+    configs/<neural-lam config>     the training neural-lam config, with
                                     datastore config paths as sibling files
-    configs/<datastore config>      the datastore configs they name
-    configs/<boundary stats>.zarr   the "stats datastore" neural-lam opens
+    configs/<datastore config>      the training interior and boundary
+                                    datastore configs it names
+    configs/<boundary>.zarr         the "stats datastore" neural-lam opens
                                     for `overload_stats_path` (statistics and
                                     splits of the training boundary datastore)
     stats/<datastore>.stats.zarr    training statistics of the training
@@ -23,8 +26,8 @@ gefion-1) and by the checks:
                                     package zip)
 
 The datastore names (config file names without `.yaml`) follow from the
-neural-lam config of the training boundary source (`era5`), so the same
-layout serves any model with this config chain.
+training neural-lam config, so the same layout serves any model trained
+with an interior and a boundary datastore.
 """
 import zipfile
 from pathlib import Path
@@ -62,36 +65,24 @@ def checkpoint_path(artifact_dir):
 
 
 def training_configs(artifact_dir):
-    """The configs of the training (ERA5) boundary source."""
-    return mc.model_configs(
-        Path(artifact_dir) / CONFIGS, mc.TRAINING_BOUNDARY_SOURCE
-    )
+    """The training configs (named by configs/model.yaml)."""
+    return mc.training_configs(Path(artifact_dir) / CONFIGS)
 
 
 def required_paths(artifact_dir, checkpoint=False):
     """All paths an artifact must have (from its configs/model.yaml)."""
     artifact_dir = Path(artifact_dir)
     configs_dir = artifact_dir / CONFIGS
+    training = training_configs(artifact_dir)
     paths = {
         configs_dir / "model.yaml",
+        configs_dir / training.neural_lam_config,
+        configs_dir / training.interior_datastore,
+        configs_dir / training.boundary_datastore,
+        stats_datastore_path(artifact_dir, training.boundary_datastore),
         artifact_dir / ARTIFACT_META,
         artifact_dir / README,
     }
-    for source in mc.boundary_sources(configs_dir):
-        configs = mc.model_configs(configs_dir, source)
-        paths |= {
-            configs_dir / configs.neural_lam_config,
-            configs_dir / configs.interior_datastore,
-            configs_dir / configs.boundary_datastore,
-            configs_dir / configs.boundary_stats_datastore,
-        }
-        if configs.boundary_stats_datastore != configs.boundary_datastore:
-            paths.add(
-                stats_datastore_path(
-                    artifact_dir, configs.boundary_stats_datastore
-                )
-            )
-    training = training_configs(artifact_dir)
     for datastore in [
         training.interior_datastore,
         training.boundary_datastore,
@@ -107,36 +98,25 @@ def required_paths(artifact_dir, checkpoint=False):
 
 def check_artifact(artifact_dir, checkpoint=False):
     """
-    Check an artifact directory: all required paths exist, every boundary
-    source uses the training interior datastore and is normalised with the
-    training boundary statistics (the only ones the artifact has), and the
-    stats datastore loads in neural-lam. Raises ValueError on problems.
+    Check an artifact directory: all required paths exist, it has nothing
+    in configs/ besides the training configs and the stats datastore (no
+    operational configs), and the stats datastore loads in neural-lam.
+    Raises ValueError on problems.
     """
     artifact_dir = Path(artifact_dir)
+    required = required_paths(artifact_dir, checkpoint=checkpoint)
     problems = [
         f"missing {p.relative_to(artifact_dir)}"
-        for p in required_paths(artifact_dir, checkpoint=checkpoint)
+        for p in required
         if not p.exists()
     ]
     configs_dir = artifact_dir / CONFIGS
+    problems += [
+        f"{p.relative_to(artifact_dir)} isn't a training config"
+        for p in sorted(configs_dir.iterdir())
+        if p not in required
+    ]
     training = training_configs(artifact_dir)
-    for source in mc.boundary_sources(configs_dir):
-        configs = mc.model_configs(configs_dir, source)
-        if _name(configs.interior_datastore) != _name(
-            training.interior_datastore
-        ):
-            problems.append(
-                f"{source}: interior datastore {configs.interior_datastore}"
-                f" isn't the training one ({training.interior_datastore})"
-            )
-        if _name(configs.boundary_stats_datastore) != _name(
-            training.boundary_datastore
-        ):
-            problems.append(
-                f"{source}: boundary normalised with "
-                f"{configs.boundary_stats_datastore}, not with the training "
-                f"boundary statistics ({training.boundary_datastore})"
-            )
     if problems:
         raise ValueError(
             f"inference artifact {artifact_dir}: " + "; ".join(problems)
@@ -184,4 +164,4 @@ def write_zip(artifact_dir, fp_zip):
 
 
 def _name(datastore_config):
-    return mc.ModelConfigs.name(datastore_config)
+    return mc.TrainingConfigs.name(datastore_config)

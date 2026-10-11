@@ -6,7 +6,7 @@ The statistics ANNA's boundary was normalised with (`forcing__train__*` and
 `static__train__*` of the `era_7deg_model1_config` datastore) were never
 exported from Gefion. They can be reproduced exactly from the public
 WeatherBench2 ERA5 store because we know
-- the boundary datastore config (`configs/era_7deg_model1_config.yaml`),
+- the boundary datastore config (`artifact/configs/era_7deg_model1_config.yaml`),
 - the ERA5 subset box the datastore was built from
   (`era_danra_model1_subset.zarr`: lat 79.25..32.75, lon -27.0..39.5 at 0.25
   deg, 187 x 267 points), and
@@ -79,6 +79,7 @@ from tqdm import tqdm
 WB2_ERA5 = "gs://weatherbench2/datasets/era5/1959-2022-6h-1440x721.zarr"
 DEFAULT_CONFIG = (
     Path(__file__).resolve().parents[3]
+    / "artifact"
     / "configs"
     / "era_7deg_model1_config.yaml"
 )

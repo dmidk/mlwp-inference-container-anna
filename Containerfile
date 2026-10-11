@@ -31,7 +31,7 @@ RUN python -c 'import importlib.metadata as md, neural_lam, torch; print("neural
 # inference_artifact/configs/model.yaml, unless it's already there.
 ARG ARTIFACT_SOURCE="zenodo"
 ARG PACKAGE_URL="https://zenodo.org/records/23293148/files/anna-danra-2026-10-11.zip?download=1"
-ARG PACKAGE_MD5="0eaad58528c52c0c7266126f8b321731"
+ARG PACKAGE_MD5="d453733a56c381d63922806cd4b25472"
 ARG LOCAL_ARTIFACT_DIR="artifact/build/.empty"
 # ${LOCAL_ARTIFACT_DIR} must exist in the build context: build_image.sh
 # creates an empty one for ARTIFACT_SOURCE=zenodo (so no local package ends

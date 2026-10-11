@@ -2,7 +2,7 @@
 Print the command line, git commit and training config of a wandb run.
 
 Used to recover how the paper's DANRA model was trained (run `hfzfhiha`, see
-`configs/model.yaml`): the `train_model` arguments, the neural-lam-dev commit
+`artifact/configs/model.yaml`): the `train_model` arguments, the neural-lam-dev commit
 and the datastore config. Needs wandb access to the `jo-research-team`
 entity.
 

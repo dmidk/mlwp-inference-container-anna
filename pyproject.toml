@@ -47,6 +47,10 @@ dev = [
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+# the operational (DINI/IFS) boundary datastore configs
+anna_inference = ["boundary/*.yaml"]
+
 [tool.isort]
 profile = "black"
 # as black in .pre-commit-config.yaml (the black profile assumes 88)

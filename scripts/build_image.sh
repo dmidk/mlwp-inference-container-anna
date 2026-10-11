@@ -49,7 +49,7 @@ ARTIFACT_SOURCE=${ARTIFACT_SOURCE:-zenodo}
 # the ANNA inference package on Zenodo (record 23293148, DOI
 # 10.5281/zenodo.23293148; built as artifact/build/anna-danra-2026-10-11.zip)
 PACKAGE_URL=${PACKAGE_URL:-https://zenodo.org/records/23293148/files/anna-danra-2026-10-11.zip?download=1}
-PACKAGE_MD5=${PACKAGE_MD5:-0eaad58528c52c0c7266126f8b321731}
+PACKAGE_MD5=${PACKAGE_MD5:-d453733a56c381d63922806cd4b25472}
 
 if [ "$ARTIFACT_SOURCE" = "local" ]; then
 	# relative to the repository root (the build context)

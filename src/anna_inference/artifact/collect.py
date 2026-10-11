@@ -7,8 +7,7 @@ next to each datastore config) still exist. Everything that only exists
 there comes from the training setup itself:
 
 - the training neural-lam config and its datastore configs (written as the
-  neural-lam config `model.yaml` names for the training boundary source,
-  with sibling datastore paths);
+  neural-lam config `model.yaml` names, with sibling datastore paths);
 - the training statistics of the interior and boundary datastores
   (`stats/`), and the boundary "stats datastore" neural-lam opens for
   `overload_stats_path` (`configs/<boundary>.zarr`);
@@ -17,8 +16,11 @@ there comes from the training setup itself:
   (`grids/`);
 - the checkpoint.
 
-The model description (`model.yaml`) and the configs for running from DINI
-or IFS come from `configs/` of this repository. The result has the layout of
+The model description (`model.yaml`) comes from `artifact/configs/` of this
+repository; its training configs there are the reference for the datastore
+names. The artifact describes the model as trained: the operational (DINI,
+IFS) boundary configs are part of this package, not of the artifact. The
+result has the layout of
 `anna_inference.artifact.layout` (checked at the end), the same as
 `anna_inference.artifact.assemble` reconstructs for the paper's model, whose
 training datastores were no longer available.
@@ -203,12 +205,13 @@ def collect(nl_config, checkpoint, out, configs_dir, artifact_name):
     configs_out = out / layout.CONFIGS
     configs_out.mkdir(parents=True)
 
-    # the model description and the operational configs from this repository
-    for fp in sorted(Path(configs_dir).glob("*.yaml")):
-        shutil.copy(fp, configs_out / fp.name)
-    training = mc.model_configs(configs_out, mc.TRAINING_BOUNDARY_SOURCE)
+    # the model description from this repository; the training configs
+    # there are the reference for the datastore names the deployment expects
+    shutil.copy(Path(configs_dir) / "model.yaml", configs_out / "model.yaml")
+    training = mc.training_configs(configs_dir)
 
-    # the training configs, as named in model.yaml and its neural-lam config
+    # the training configs from the training machine, named as in model.yaml
+    # and the reference training config
     paths = find_datastore_paths(nl_config)
     for key in [("datastore",), ("datastore_boundary",)]:
         if key not in paths:
@@ -219,7 +222,7 @@ def collect(nl_config, checkpoint, out, configs_dir, artifact_name):
     }
     nl = yaml.safe_load(Path(nl_config).read_text())
     for key, fn in expected.items():
-        if mc.ModelConfigs.name(paths[key]) != mc.ModelConfigs.name(fn):
+        if mc.TrainingConfigs.name(paths[key]) != mc.TrainingConfigs.name(fn):
             raise ValueError(
                 f"{key[0]} of {nl_config} is {paths[key].name}, but the "
                 f"configs in {configs_dir} use {fn} for the training "
@@ -328,8 +331,8 @@ def main():
     parser.add_argument(
         "--configs-dir",
         type=Path,
-        default=REPO_DIR / "configs",
-        help="model.yaml and the operational (DINI/IFS) configs",
+        default=REPO_DIR / "artifact" / "configs",
+        help="model.yaml and the reference training configs",
     )
     parser.add_argument(
         "--zip",

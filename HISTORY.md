@@ -97,6 +97,12 @@ Both used the same `7deg_config.yaml` datastores, so the DANRA interior statisti
 - Interior: regrid DINI onto the DANRA grid.
 - Initial states: T+0 and T+3h of the same DINI run, so the first ANNA prediction is valid at T+6h.
 - Vertical velocity: derive ERA5-style ω (Pa/s) from DINI `tw` (m/s). This replaces the earlier idea of filling it with the train mean; DINI already has it.
+- **The inference artifact describes the model as trained, nothing operational (user, 2026-10-11).** The model was only trained on DANRA and ERA5, so the artifact (and the Zenodo package) holds:
+  - `model.yaml`, now with a single `neural_lam_config` (the training one) instead of a per-source mapping;
+  - the training neural-lam config, the DANRA and ERA5 datastore configs, and the ERA5 stats datastore;
+  - stats, grids and the checkpoint.
+
+  The DINI/IFS boundary datastore configs moved into the package (`src/anna_inference/boundary/`, so into the image). The stored `7deg_config_{dini,ifs}.yaml` are gone: `model_configs.inference_neural_lam_config` derives the forecast's neural-lam config from the training one (the boundary datastore swapped, and `overload_stats_path` set to the ERA5 training config). The result is identical to the old files. The repo copies of the training configs moved from `configs/` to `artifact/configs/`. The Zenodo draft 23293148 was updated with the rebuilt package.
 
 ## Steps
 

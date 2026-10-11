@@ -87,13 +87,15 @@ def build_metadata(fp_zip):
     stats_attrs = artifact["assembled_from"]["boundary_stats_attrs"]
     version = artifact["artifact_name"].rsplit("-", 3)[-3:]
     description = f"""
-<p>Inference package for running the DANRA machine-learning limited area model
-(LAM) of <a href="https://arxiv.org/abs/2504.09340">Adamov et al. (2025),
-"{PAPER_TITLE}"</a>
-operationally from DMI's DINI forecasts (interior initial states) with DINI or
-IFS forecasts on the boundary, with the
-<a href="{REPO_URL}">mlwp-inference-container-anna</a>
-repository.</p>
+<p>Inference package of the DANRA machine-learning limited area model (LAM) of
+<a href="https://arxiv.org/abs/2504.09340">Adamov et al. (2025),
+"{PAPER_TITLE}"</a>, describing the model as it was trained (DANRA interior,
+ERA5 boundary): the training configs, the training statistics the inputs are
+normalised with, and the grids. Running the model from operational data is
+done by the deployment, e.g. DMI's
+<a href="{REPO_URL}">mlwp-inference-container-anna</a>, which runs it from DINI
+(interior) and DINI or IFS (boundary) forecasts, normalising the boundary with
+the ERA5 training statistics of this package.</p>
 
 <p><b>This package does not contain the model weights.</b> The checkpoint is the
 paper's published DANRA model, <a href="https://doi.org/{ckpt['doi']}">{ckpt['doi']}</a>
@@ -102,14 +104,13 @@ deployment downloads separately.</p>
 
 <p>Contents:</p>
 <ul>
-<li><code>configs/</code>: mllam-data-prep datastore configs for the DANRA interior
-and the boundary (ERA5 as in training, operational IFS and DINI), neural-lam
-configs, and <code>model.yaml</code> describing the model (checkpoint, graph
-recipe <code>{model['graph']['name']}</code>, neural-lam arguments).
-<code>ifs_7deg_model1_config.yaml</code> documents the variables, units and
-grid an IFS boundary forecast must provide.</li>
+<li><code>configs/</code>: the training neural-lam config, the mllam-data-prep
+datastore configs of the DANRA interior and the ERA5 boundary, and
+<code>model.yaml</code> describing the model (checkpoint, graph recipe
+<code>{model['graph']['name']}</code>, neural-lam arguments).</li>
 <li><code>configs/era_7deg_model1_config.zarr</code>: ERA5 boundary statistics
-datastore used to normalise the (ERA5, IFS or DINI) boundary forcing.</li>
+datastore, through which neural-lam normalises a boundary from another source
+with the ERA5 training statistics.</li>
 <li><code>stats/</code>: training statistics of the DANRA interior datastore and
 of the ERA5 boundary datastore. The ERA5 boundary statistics were recomputed
 exactly from WeatherBench2 ERA5 ({stats_attrs.get('n_time_steps')} 6-hourly
@@ -136,10 +137,7 @@ Schemm.</p>
 """
     return {
         "upload_type": "dataset",
-        "title": (
-            "ANNA inference package for the DANRA ML LAM model "
-            "(DINI/IFS-driven forecasts)"
-        ),
+        "title": "ANNA inference package for the DANRA ML LAM model",
         "creators": CREATORS,
         "contributors": [
             dict(c, type="Researcher") for c in PAPER_CONTRIBUTORS
@@ -153,8 +151,6 @@ Schemm.</p>
             "limited area model",
             "neural-lam",
             "DANRA",
-            "DINI",
-            "IFS",
             "ERA5",
         ],
         "related_identifiers": [

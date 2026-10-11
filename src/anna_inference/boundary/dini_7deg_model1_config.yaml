@@ -29,7 +29,8 @@
 # `anna_inference.create_inference_dataset`.
 #
 # Features are normalised with the ERA5 training statistics
-# (`overload_stats_path` in `7deg_config_dini.yaml`).
+# (`overload_stats_path` in the neural-lam config derived from the training
+# config at run time, `anna_inference.model_configs`).
 #
 # NB: DINI only extends to ~69.9N while the boundary ring extends to ~71.5N,
 # so the northernmost boundary points are not covered by DINI (see "Open

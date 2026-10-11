@@ -30,8 +30,10 @@ history, decisions and the reasons behind them are in
 
 ## Model
 
-Described in [configs/model.yaml](configs/model.yaml) (checkpoint, graph
-recipe, neural-lam arguments), which `entry.sh` and the container build read.
+Described in [artifact/configs/model.yaml](artifact/configs/model.yaml)
+(checkpoint, graph recipe, neural-lam arguments, training neural-lam config),
+which is part of the inference artifact and is read by `entry.sh` and the
+container build.
 
 - Checkpoint: the paper's DANRA model, Zenodo
   [10.5281/zenodo.15131838](https://doi.org/10.5281/zenodo.15131838)
@@ -65,25 +67,38 @@ Pinned in [pyproject.toml](pyproject.toml):
 
 ## Configs
 
-All in [configs/](configs/):
+The configs are split between what the model **is** and how this deployment
+**feeds** it.
+
+**The trained model:** part of the inference artifact, kept in this
+repository in [artifact/configs/](artifact/configs/) as inputs to building it.
 
 | File | What |
 |---|---|
-| `model.yaml` | the model to run: checkpoint (Zenodo URL, md5), graph recipe, neural-lam arguments, and which neural-lam config to use per boundary source (`neural_lam_configs`: `era5` as in training, `dini`, `ifs`) |
-| `danra_model1_config.yaml` | interior (DANRA) datastore, as in training |
-| `era_7deg_model1_config.yaml` | ERA5 boundary datastore the model was trained with; reference for the boundary features and their (ERA5) normalisation statistics |
-| `ifs_7deg_model1_config.yaml` | operational IFS boundary. **Its header is the contract for the IFS GRIB → zarr conversion** (variables, units, dims, lead times, and the 0.25° box lat 40.0–72.0, lon −27.0–39.5; the east edge must be exactly 39.5°E) |
+| `model.yaml` | the model: checkpoint (Zenodo URL, md5), graph recipe, neural-lam arguments, and the training neural-lam config |
+| `7deg_config_era5.yaml` | the neural-lam config the model was trained with |
+| `danra_model1_config.yaml` | interior (DANRA) datastore, as in training; the template for the inference interior datastore |
+| `era_7deg_model1_config.yaml` | ERA5 boundary datastore the model was trained with; the reference for the boundary features and their (ERA5) normalisation statistics |
+
+**Operational boundaries:** in the package,
+[src/anna_inference/boundary/](src/anna_inference/boundary/), and so in the
+image. The model wasn't trained on these; they produce the ERA5 boundary
+features from other forecasts.
+
+| File | What |
+|---|---|
+| `ifs_7deg_model1_config.yaml` | operational IFS boundary. **Its header is the contract for the IFS GRIB → zarr conversion**: variables, units, dims, lead times, and the 0.25° box lat 40.0–72.0, lon −27.0–39.5 (the east edge must be exactly 39.5°E) |
 | `dini_7deg_model1_config.yaml` | DINI boundary, in the same layout as IFS |
-| `7deg_config_{era5,ifs,dini}.yaml` | neural-lam configs; IFS and DINI are normalised with the ERA5 training statistics (`overload_stats_path`) |
 
-The configs are linked in a chain, and each link is stated in one place only:
-1. `model.yaml` names the neural-lam config for each boundary source;
-2. that neural-lam config names its interior and boundary datastore configs
-   (`datastore.config_path`, `datastore_boundary.config_path`);
-3. for DINI/IFS, it also names the ERA5 training boundary datastore whose
-   statistics normalise the boundary (`overload_stats_path`).
+For a forecast, `anna_inference.model_configs.inference_neural_lam_config`
+derives the neural-lam config from the training one. It keeps the same model
+and settings, with:
+- the inference interior datastore;
+- the operational boundary datastore, normalised with the ERA5 training
+  statistics (`overload_stats_path`).
 
-`anna_inference.model_configs` follows this chain for the scripts.
+`tests/test_boundary_configs.py` checks that the operational boundaries give
+exactly the ERA5 boundary features, in the order the checkpoint expects.
 
 ## Inference artifact
 
@@ -106,11 +121,15 @@ statistics it was trained with.
 The artifact should be collected on the machine the model was trained on,
 where the training datastores are. ANNA's had to be reconstructed after the
 fact: the boundary configs, statistics and grid were missing (see
-[artifact/README.md](artifact/README.md)). ANNA's artifact has:
+[artifact/README.md](artifact/README.md)).
+
+The artifact describes the model **as trained** (DANRA, ERA5) and nothing
+else. The operational boundaries (DINI, IFS) aren't part of it; they are
+part of this repository's code. ANNA's artifact has:
 
 | Path | What |
 |---|---|
-| `configs/` | the configs above, including `model.yaml` |
+| `configs/` | the trained-model configs above (`model.yaml`, the training neural-lam config, the DANRA and ERA5 datastore configs) |
 | `configs/era_7deg_model1_config.zarr` | the ERA5 boundary statistics in the form neural-lam reads them (`overload_stats_path`) |
 | `stats/` | training statistics of the DANRA interior and the ERA5 boundary datastores (the ERA5 ones recomputed exactly) |
 | `grids/` | the DANRA grid and statics (target grid for regridding DINI) and the 18,014 ERA5 boundary points the model was trained with |

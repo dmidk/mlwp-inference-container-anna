@@ -21,7 +21,7 @@ import yaml
 from anna_inference import model_configs as mc
 from anna_inference.artifact import collect, layout
 
-CONFIGS_DIR = Path(__file__).parent.parent / "configs"
+CONFIGS_DIR = Path(__file__).parent.parent / "artifact" / "configs"
 SPLITS = xr.DataArray(
     np.array([["2000-01-01", "2000-01-02"]] * 3),
     dims=["split_name", "split_part"],
@@ -101,7 +101,7 @@ def training_setup(tmp_path):
     A training directory as on the training machine: neural-lam config,
     datastore configs and their zarrs, and a checkpoint.
     """
-    training = mc.model_configs(CONFIGS_DIR, mc.TRAINING_BOUNDARY_SOURCE)
+    training = mc.training_configs(CONFIGS_DIR)
     train_dir = tmp_path / "training"
     (train_dir / "datastores").mkdir(parents=True)
     for fn, ds in [

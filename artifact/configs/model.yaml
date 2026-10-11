@@ -2,8 +2,10 @@
 # Limited Area Models: Kilometer-Scale Weather Forecasting in Realistic
 # Settings" (Adamov et al. 2025, arXiv:2504.09340), published on Zenodo.
 #
-# Read by entry.sh (graph, train_model arguments, checkpoint) and by the
-# Containerfile / inference-artifact/assemble_artifact.py (checkpoint download).
+# Part of the inference artifact, which describes the model as trained
+# (DANRA interior, ERA5 boundary). Read by scripts/entry.sh (graph,
+# train_model arguments, checkpoint), the Containerfile and
+# anna_inference.artifact (checkpoint download).
 
 checkpoint:
   # CC-BY-4.0, by Simon Adamov, Joel Oskarsson and Kasper Stener Hintz
@@ -22,14 +24,12 @@ training:
   neural_lam_dev_commit: e7d11c9a9b10d0165314d00f230243addd79d9fb
   datastore_config: 7deg_config.yaml (DANRA interior + ERA5 7.19 deg boundary)
 
-# neural-lam config per boundary source. Each names its interior and boundary
-# datastore configs (`datastore.config_path`, `datastore_boundary.config_path`)
-# and, for DINI/IFS, the ERA5 boundary datastore whose training statistics
-# normalise the boundary (`overload_stats_path`).
-neural_lam_configs:
-  era5: 7deg_config_era5.yaml  # as in training
-  dini: 7deg_config_dini.yaml
-  ifs: 7deg_config_ifs.yaml
+# The neural-lam config the model was trained with. It names the interior
+# (DANRA) and boundary (ERA5) datastore configs, whose statistics and grids
+# are in the artifact. Operational boundaries (DINI, IFS) are not part of the
+# model: the deployment derives its neural-lam config from this one, with its
+# own boundary datastore normalised with the ERA5 training statistics.
+neural_lam_config: 7deg_config_era5.yaml
 
 graph:
   name: 7deg_rect_hi4

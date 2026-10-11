@@ -1,6 +1,8 @@
 """
-Check that the ANNA boundary datastore configs are consistent with each other
-and with the data contract documented in `configs/ifs_7deg_model1_config.yaml`.
+Check that the operational boundary datastore configs (DINI, IFS; package
+data in `anna_inference/boundary/`) give exactly the boundary features of the
+ERA5 training boundary (`artifact/configs/era_7deg_model1_config.yaml`), and
+follow the data contract documented in `ifs_7deg_model1_config.yaml`.
 
 Synthetic zarr datasets following the contract are created for the IFS/DINI
 boundaries (and in ERA5 layout for the training boundary), and each config is
@@ -24,12 +26,19 @@ import pytest
 import xarray as xr
 import yaml
 
-CONFIGS_DIR = Path(__file__).parent.parent / "configs"
-from anna_inference.create_inference_dataset import (  # noqa: E402
+from anna_inference.create_inference_dataset import (
     boundary_times,
     boundary_to_valid_time,
 )
-from anna_inference.model_configs import model_configs  # noqa: E402
+from anna_inference.model_configs import (
+    BOUNDARY_SOURCES,
+    boundary_config_path,
+    inference_neural_lam_config,
+    training_configs,
+)
+
+# the training configs in the repository (inputs to the inference artifact)
+TRAINING_CONFIGS_DIR = Path(__file__).parent.parent / "artifact" / "configs"
 
 FORECAST_ANALYSIS_TIME = "2026-09-26T12:00"
 FORECAST_DURATION = pd.Timedelta("6h").to_pytimedelta()
@@ -65,15 +74,18 @@ N_FORCING_FEATURES = (
 )
 
 BOUNDARY_CONFIGS = {
-    "era5": "era_7deg_model1_config.yaml",
+    "era5": "era_7deg_model1_config.yaml",  # training
     "ifs": "ifs_7deg_model1_config.yaml",
     "dini": "dini_7deg_model1_config.yaml",
 }
-NL_CONFIGS = {
-    "era5": "7deg_config_era5.yaml",
-    "ifs": "7deg_config_ifs.yaml",
-    "dini": "7deg_config_dini.yaml",
-}
+
+
+def _boundary_config(name):
+    """Path of a boundary datastore config: training or operational."""
+    if name == "era5":
+        return TRAINING_CONFIGS_DIR / BOUNDARY_CONFIGS[name]
+    return boundary_config_path(name)
+
 
 # small regular lat/lon grid, a few points is enough
 LATS = np.array([60.0, 59.75, 59.5])
@@ -155,9 +167,7 @@ def _make_era5_layout_dataset(times):
 
 
 def _create_boundary_dataset(config_name, fp_input):
-    config = mdp.Config.from_yaml_file(
-        CONFIGS_DIR / BOUNDARY_CONFIGS[config_name]
-    )
+    config = mdp.Config.from_yaml_file(_boundary_config(config_name))
     for input_config in config.inputs.values():
         input_config.path = str(fp_input)
     # cropping needs the full interior (DANRA) dataset, which is out of scope
@@ -192,7 +202,7 @@ def boundary_datasets(tmp_path_factory):
         datasets[name] = _create_boundary_dataset(name, fp)
 
     # training config covers 2000-2020, the synthetic data only a day
-    config = mdp.Config.from_yaml_file(CONFIGS_DIR / BOUNDARY_CONFIGS["era5"])
+    config = mdp.Config.from_yaml_file(_boundary_config("era5"))
     for input_config in config.inputs.values():
         input_config.path = str(fp_era5)
     config.output.domain_cropping = None
@@ -208,32 +218,75 @@ def boundary_datasets(tmp_path_factory):
 
 @pytest.mark.parametrize("name", list(BOUNDARY_CONFIGS))
 def test_boundary_config_loads(name):
-    config = mdp.Config.from_yaml_file(CONFIGS_DIR / BOUNDARY_CONFIGS[name])
-    assert config.output.domain_cropping.margin_width_degrees == 7.19
-    assert config.output.domain_cropping.include_interior_points is False
-    assert (
-        CONFIGS_DIR
-        / config.output.domain_cropping.interior_dataset_config_path
-    ).exists()
+    config = mdp.Config.from_yaml_file(_boundary_config(name))
+    cropping = config.output.domain_cropping
+    assert cropping.margin_width_degrees == 7.19
+    assert cropping.include_interior_points is False
+    # cropped around the training interior (create_inference_dataset points
+    # the operational configs at the inference interior config)
+    assert cropping.interior_dataset_config_path == "danra_model1_config.yaml"
+
+
+def test_operational_boundary_configs_are_packaged():
+    assert set(BOUNDARY_SOURCES) == {"dini", "ifs"}
+    for name in BOUNDARY_SOURCES:
+        assert boundary_config_path(name).name == BOUNDARY_CONFIGS[name]
+        assert boundary_config_path(name).exists()
+    with pytest.raises(KeyError):
+        boundary_config_path("era5")  # the training boundary isn't one
 
 
 def test_interior_config_loads():
-    mdp.Config.from_yaml_file(CONFIGS_DIR / "danra_model1_config.yaml")
+    mdp.Config.from_yaml_file(
+        TRAINING_CONFIGS_DIR / "danra_model1_config.yaml"
+    )
 
 
-@pytest.mark.parametrize("name", list(NL_CONFIGS))
-def test_neural_lam_config_references(name):
-    nl_config = yaml.safe_load((CONFIGS_DIR / NL_CONFIGS[name]).read_text())
-    assert nl_config["datastore"]["config_path"] == "danra_model1_config.yaml"
-    boundary = nl_config["datastore_boundary"]
-    assert boundary["config_path"] == BOUNDARY_CONFIGS[name]
-    if name == "era5":
-        assert "overload_stats_path" not in boundary
-    else:
-        assert boundary["overload_stats_path"] == BOUNDARY_CONFIGS["era5"]
-    for key in ["config_path", "overload_stats_path"]:
-        if key in boundary:
-            assert (CONFIGS_DIR / boundary[key]).exists()
+def test_training_configs_resolve():
+    # model.yaml -> training neural-lam config -> datastore configs
+    configs = training_configs(TRAINING_CONFIGS_DIR)
+    assert configs.neural_lam_config == "7deg_config_era5.yaml"
+    assert configs.interior_datastore == "danra_model1_config.yaml"
+    assert configs.boundary_datastore == BOUNDARY_CONFIGS["era5"]
+    for fn in [
+        configs.neural_lam_config,
+        configs.interior_datastore,
+        configs.boundary_datastore,
+    ]:
+        assert (TRAINING_CONFIGS_DIR / fn).exists()
+    # nothing but the training configs and the model description
+    assert sorted(p.name for p in TRAINING_CONFIGS_DIR.iterdir()) == sorted(
+        [
+            "model.yaml",
+            configs.neural_lam_config,
+            configs.interior_datastore,
+            configs.boundary_datastore,
+        ]
+    )
+
+
+@pytest.mark.parametrize("name", list(BOUNDARY_SOURCES))
+def test_inference_neural_lam_config(name):
+    configs = training_configs(TRAINING_CONFIGS_DIR)
+    training = yaml.safe_load(
+        (TRAINING_CONFIGS_DIR / configs.neural_lam_config).read_text()
+    )
+    nl_config = inference_neural_lam_config(
+        training,
+        interior_config="danra_model1_config.yaml",
+        boundary_config=BOUNDARY_CONFIGS[name],
+        stats_config=configs.boundary_datastore,
+    )
+    # as the formerly stored 7deg_config_{dini,ifs}.yaml: the training config
+    # with the operational boundary, normalised with the ERA5 statistics
+    expected = yaml.safe_load(yaml.safe_dump(training))
+    expected["datastore_boundary"]["config_path"] = BOUNDARY_CONFIGS[name]
+    expected["datastore_boundary"]["overload_stats_path"] = BOUNDARY_CONFIGS[
+        "era5"
+    ]
+    assert nl_config == expected
+    # the training config itself is left alone
+    assert "overload_stats_path" not in training["datastore_boundary"]
 
 
 @pytest.mark.parametrize("name", list(BOUNDARY_CONFIGS))
@@ -265,24 +318,6 @@ def test_forecast_boundary_dims(boundary_datasets, name):
     # 12Z + 6h forecast: boundary 06Z (padded) .. 06Z next day (padded)
     assert ds.time.size == 5
     assert not bool(ds.forcing.isnull().any())
-
-
-def test_model_yaml_neural_lam_configs():
-    model = yaml.safe_load((CONFIGS_DIR / "model.yaml").read_text())
-    assert model["neural_lam_configs"] == NL_CONFIGS
-
-
-@pytest.mark.parametrize("name", list(NL_CONFIGS))
-def test_model_configs_resolve(name):
-    # model.yaml -> neural-lam config -> datastore configs
-    configs = model_configs(CONFIGS_DIR, name)
-    assert configs.neural_lam_config == NL_CONFIGS[name]
-    assert configs.interior_datastore == "danra_model1_config.yaml"
-    assert configs.boundary_datastore == BOUNDARY_CONFIGS[name]
-    # every boundary is normalised with the ERA5 training statistics
-    assert configs.boundary_stats_datastore == BOUNDARY_CONFIGS["era5"]
-    for fn in [configs.interior_datastore, configs.boundary_datastore]:
-        assert (CONFIGS_DIR / fn).exists()
 
 
 def _dt(s):

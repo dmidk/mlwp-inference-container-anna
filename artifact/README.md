@@ -1,10 +1,16 @@
 # Building the ANNA inference package
 
-This is how the **inference package** is built: everything ANNA needs to run
-the paper's DANRA model except the checkpoint (configs, training statistics,
-grids and the model description). Once built, the package is published on
-Zenodo, and the container build (`ARTIFACT_SOURCE=zenodo`) downloads it along
-with the checkpoint.
+This is how the **inference package** is built. It holds the paper's DANRA
+model **as trained** (DANRA interior, ERA5 boundary), apart from the
+checkpoint:
+- the training configs and model description;
+- the training statistics;
+- the grids.
+
+The operational boundaries (DINI, IFS) aren't part of it: they're in the
+`anna_inference` package (`src/anna_inference/boundary/`). Once built, the
+package is published on Zenodo, and the container build
+(`ARTIFACT_SOURCE=zenodo`) downloads it along with the checkpoint.
 
 - [package-README.md](package-README.md) is the README shipped inside the
   package, describing its contents to users of the Zenodo record.
@@ -49,9 +55,9 @@ From the training setup it collects:
   interior datastore, and the boundary points;
 - the checkpoint.
 
-The model description (`model.yaml`) and the DINI/IFS configs come from
-[`../configs/`](../configs/); update `model.yaml` first if the training
-arguments or graph changed. A checkpoint whose md5 differs from `model.yaml`'s
+The model description (`model.yaml`) comes from [`configs/`](configs/), whose
+training configs are also the reference for the datastore names; update
+`model.yaml` first if the training arguments or graph changed. A checkpoint whose md5 differs from `model.yaml`'s
 is recorded with its md5 and no download URL.
 
 It writes `artifact/build/<name>/` (with the checkpoint) and, with `--zip`,
@@ -73,7 +79,7 @@ reconstructed.
 ## The model
 
 The paper's DANRA model (arXiv:2504.09340) is described in
-[`../configs/model.yaml`](../configs/model.yaml):
+[`configs/model.yaml`](configs/model.yaml):
 
 - **Checkpoint:** Zenodo
   [10.5281/zenodo.15131838](https://doi.org/10.5281/zenodo.15131838),
@@ -120,7 +126,8 @@ The paper's DANRA model (arXiv:2504.09340) is described in
    - `provenance/check_boundary_stats.py` checks the result.
 3. The **DANRA v0.5.0** public store, read by `anna_inference.regrid_dini
    create-danra-grid` for the DANRA grid and statics.
-4. The **repo configs** in [`../configs/`](../configs/).
+4. The **training configs** in [`configs/`](configs/): `model.yaml`, the
+   training neural-lam config and the DANRA and ERA5 datastore configs.
 
 ## Build
 
@@ -196,7 +203,7 @@ The image builds from it once the record is published.
 **Current draft (2026-10-11):** deposition
 [23293148](https://zenodo.org/deposit/23293148), reserved DOI
 `10.5281/zenodo.23293148`, `anna-danra-2026-10-11.zip`, md5
-`0eaad58528c52c0c7266126f8b321731`. Not published.
+`d453733a56c381d63922806cd4b25472`. Not published.
 
 ## gefion-1: a prior, incorrect inference artifact
 

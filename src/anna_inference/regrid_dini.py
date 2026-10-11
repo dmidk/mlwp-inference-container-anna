@@ -8,7 +8,8 @@ expects:
   `danra_model1_config` datastore config)
 - boundary: a regular 0.25 deg lat/lon box with ERA5 (WeatherBench2) variable
   names and conventions, following the contract in
-  `configs/ifs_7deg_model1_config.yaml`, written as `{output}/boundary.zarr`
+  `anna_inference/boundary/ifs_7deg_model1_config.yaml`, written as
+  `{output}/boundary.zarr`
   (read through the `dini_7deg_model1_config` datastore config)
 
 Conventions (checked against the data, see INFERENCE_PLAN.md step 4):
@@ -74,9 +75,10 @@ INTERIOR_EXTRA_STEPS = 2
 
 # ERA5 (WeatherBench2) 0.25 deg box covering the boundary points ANNA was
 # trained with (lat 40.50..71.50, lon -26.25..39.50), as in the contract in
-# configs/ifs_7deg_model1_config.yaml. The east edge must be exactly 39.5E,
-# the edge of the training ERA5 subset: the cropping margin reaches further
-# east, so a wider box would add boundary points not used in training
+# anna_inference/boundary/ifs_7deg_model1_config.yaml. The east edge must be
+# exactly 39.5E, the edge of the training ERA5 subset: the cropping margin
+# reaches further east, so a wider box would add boundary points not used in
+# training
 BOUNDARY_LATS = np.arange(72.0, 40.0 - 0.125, -0.25)
 BOUNDARY_LONS = np.arange(-27.0, 39.5 + 0.125, 0.25)
 # DINI grid spacing, used to convert the boundary smoothing scale to grid cells
