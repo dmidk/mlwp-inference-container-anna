@@ -55,7 +55,7 @@ jobs:
         run: |
           mkdir -p artifact/build/.empty
           url=$(sed -n 's/^ARG PACKAGE_URL="\(.*\)"$/\1/p' Containerfile)
-          if ! curl -sfIL -o /dev/null "$url"; then
+          if ! curl -sfIL --retry 5 --retry-delay 10 --retry-all-errors -o /dev/null "$url"; then
             echo "::error::can't download the inference package $url" \
               "(is the Zenodo record published?)"
             exit 1

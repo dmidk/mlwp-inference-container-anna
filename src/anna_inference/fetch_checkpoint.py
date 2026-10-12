@@ -9,6 +9,9 @@ Usage:
 """
 import argparse
 import hashlib
+import http.client
+import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -22,6 +25,30 @@ def _md5(fp):
         for chunk in iter(lambda: fh.read(2**20), b""):
             md5.update(chunk)
     return md5.hexdigest()
+
+
+def _download(url, fp, attempts=5, wait=10):
+    """
+    Download `url` to `fp`, retrying (with a growing wait) on network
+    errors and server errors (e.g. a Zenodo 504), but not client errors
+    """
+    for attempt in range(1, attempts + 1):
+        try:
+            with urllib.request.urlopen(url) as response, open(fp, "wb") as fh:
+                for chunk in iter(lambda: response.read(2**20), b""):
+                    fh.write(chunk)
+            return
+        except (urllib.error.URLError, http.client.HTTPException) as ex:
+            client_error = (
+                isinstance(ex, urllib.error.HTTPError) and ex.code < 500
+            )
+            if client_error or attempt == attempts:
+                raise
+            logger.warning(
+                f"download failed ({ex}), retrying in {wait * attempt}s "
+                f"(attempt {attempt}/{attempts})"
+            )
+            time.sleep(wait * attempt)
 
 
 def fetch_checkpoint(artifact_dir):
@@ -44,11 +71,7 @@ def fetch_checkpoint(artifact_dir):
 
     fp_tmp = fp.with_name(fp.name + ".tmp")
     logger.info(f"downloading {ckpt['url']} to {fp}")
-    with urllib.request.urlopen(ckpt["url"]) as response, open(
-        fp_tmp, "wb"
-    ) as fh:
-        for chunk in iter(lambda: response.read(2**20), b""):
-            fh.write(chunk)
+    _download(ckpt["url"], fp_tmp)
     md5 = _md5(fp_tmp)
     if md5 != ckpt["md5"]:
         fp_tmp.unlink()

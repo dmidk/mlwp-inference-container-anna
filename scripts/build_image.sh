@@ -69,7 +69,7 @@ elif [ "$ARTIFACT_SOURCE" = "zenodo" ]; then
 		exit 1
 	fi
 	# a Zenodo draft's files can't be downloaded until it's published
-	if ! curl -sfIL -o /dev/null "$PACKAGE_URL"; then
+	if ! curl -sfIL --retry 5 --retry-delay 10 --retry-all-errors -o /dev/null "$PACKAGE_URL"; then
 		echo "Error: can't download the inference package from $PACKAGE_URL."
 		echo "Is the Zenodo record published? (Use ARTIFACT_SOURCE=local with a"
 		echo "locally assembled package until then.)"

@@ -47,7 +47,7 @@ RUN if [ "$ARTIFACT_SOURCE" = "local" ] ; then \
     elif [ "$ARTIFACT_SOURCE" = "zenodo" ] ; then \
         rm -rf /workspace/inference_artifact_local && \
         test -n "$PACKAGE_URL" && test -n "$PACKAGE_MD5" && \
-        curl -fL -o inference_artifact.zip "$PACKAGE_URL" && \
+        curl -fL --retry 5 --retry-delay 10 --retry-all-errors -o inference_artifact.zip "$PACKAGE_URL" && \
         echo "$PACKAGE_MD5  inference_artifact.zip" | md5sum -c - && \
         mkdir -p /workspace/inference_artifact && \
         unzip inference_artifact.zip -d /workspace/inference_artifact && \
