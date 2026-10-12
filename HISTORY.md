@@ -109,6 +109,7 @@ Both used the same `7deg_config.yaml` datastores, so the DANRA interior statisti
   - An unknown `ANNA_*` variable is an error (exit 2, with a "did you mean"). The run logs the effective configuration and where each value came from.
   - The input (DINI, IFS) and output (upload) S3 sides each have an endpoint URL and an AWS profile option (`ANNA_{INPUT,OUTPUT}_{S3_ENDPOINT_URL,AWS_PROFILE}`, user, 2026-10-12). They're set per step as botocore's `AWS_ENDPOINT_URL_S3`/`AWS_PROFILE`, so the step modules are unchanged.
   - The old unprefixed variables (`ANALYSIS_TIME`, `INFERENCE_WORKDIR`, ...) are gone, with no compatibility shim. The build and run scripts' own variables lost the `ANNA_` prefix (`IMAGE_NAME`, `PULL_PROXY`), so they don't count as forecast options.
+- **The repository moved to [dmidk/mlwp-inference-container-anna](https://github.com/dmidk/mlwp-inference-container-anna) (user, 2026-10-12)** and is public; `leifdenby/mlwp-inference-container-anna` is now a fork of it. The published Zenodo record 23293148 still links to the leifdenby URL, which now resolves to the fork. Container images are published only from the dmidk repository (`ghcr.io/dmidk/mlwp-inference-container-anna`).
 
 ## Steps
 

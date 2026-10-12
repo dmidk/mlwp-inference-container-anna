@@ -174,9 +174,9 @@ In both cases the model checkpoint is downloaded from Zenodo during the build
 
 CI ([container-image.yml](.github/workflows/container-image.yml)) builds
 the x86_64 image from the Zenodo package on every push and pull request.
-Tags `v*` also publish it as
-`ghcr.io/leifdenby/mlwp-inference-container-anna:<tag>` and `:latest`. The
-build fails until the Zenodo record is published.
+Tags `v*` pushed to the dmidk repository also publish it as
+`ghcr.io/dmidk/mlwp-inference-container-anna:<tag>` and `:latest`
+(forks only build).
 
 ## Running a forecast
 

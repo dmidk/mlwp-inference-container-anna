@@ -61,7 +61,7 @@ from anna_inference.artifact import layout
 # the repository (the package is installed in editable mode for development)
 REPO_DIR = Path(__file__).resolve().parents[3]
 BUILD_DIR = REPO_DIR / "artifact" / "build"
-REPO_URL = "https://github.com/leifdenby/mlwp-inference-container-anna"
+REPO_URL = "https://github.com/dmidk/mlwp-inference-container-anna"
 
 
 def find_datastore_paths(nl_config_path):
