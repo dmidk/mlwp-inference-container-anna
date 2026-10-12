@@ -211,6 +211,10 @@ over its variable, which wins over the default:
 | `--artifact-path` | `ANNA_ARTIFACT_PATH` | `inference_artifact` | the inference artifact (with checkpoint); outside the container e.g. `artifact/build/<name>` |
 | `--skip-completed` | `ANNA_SKIP_COMPLETED` | `false` | skip the stages already completed in the workdir (e.g. rerun only the forecast) |
 | `--output-s3-prefix` | `ANNA_OUTPUT_S3_PREFIX` | | if set (e.g. `s3://anna-forecasts/`), the outputs are also uploaded to `{prefix}/<analysis time>/` (e.g. `2026-10-01T000000Z/`), replacing an earlier upload for that analysis time, and checked after uploading |
+| `--input-s3-endpoint-url` | `ANNA_INPUT_S3_ENDPOINT_URL` | (AWS config) | S3 endpoint for reading DINI and IFS |
+| `--input-aws-profile` | `ANNA_INPUT_AWS_PROFILE` | (AWS config) | AWS profile for reading DINI and IFS |
+| `--output-s3-endpoint-url` | `ANNA_OUTPUT_S3_ENDPOINT_URL` | (AWS config) | S3 endpoint for the upload (needs `--output-s3-prefix`) |
+| `--output-aws-profile` | `ANNA_OUTPUT_AWS_PROFILE` | (AWS config) | AWS profile for the upload (needs `--output-s3-prefix`) |
 | `--debugger` | `ANNA_DEBUGGER` | | `ipdb` to debug the python steps on exceptions |
 | `--log-level` | `ANNA_LOG_LEVEL` | `INFO` | loguru level |
 
@@ -230,6 +234,36 @@ The mapping between options and variables is done by
 [src/anna_inference/envargs.py](src/anna_inference/envargs.py). It has
 nothing ANNA-specific and only uses the standard library, so other MLWP
 inference containers can use the same convention with their own prefix.
+
+### S3 endpoints and credentials
+
+The input (DINI, and an IFS zarr on S3) and the output (the upload with
+`--output-s3-prefix`) are configured separately, so they can be on
+different S3 hosts with different credentials:
+- `--{input,output}-s3-endpoint-url` sets the endpoint for that side's steps
+  (as botocore's `AWS_ENDPOINT_URL_S3`).
+- `--{input,output}-aws-profile` sets the profile (from `~/.aws`, which
+  `run_inference_container.sh` mounts read-only). It also takes precedence
+  over `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`/`AWS_SESSION_TOKEN` in the
+  environment, which are dropped for that side.
+- Unset, a side uses the usual AWS configuration: `AWS_PROFILE`, `AWS_*`
+  keys, `AWS_ENDPOINT_URL`, or an `endpoint_url` in the profile in
+  `~/.aws/config`.
+- For a bucket on AWS, use the region's endpoint (DINI's `harmonie-zarr`:
+  `https://s3.eu-central-1.amazonaws.com`), or leave the endpoint unset. With
+  the global `https://s3.amazonaws.com` set explicitly, botocore doesn't
+  follow the redirect to the bucket's region, and reading fails with
+  "group not found".
+
+For example, reading DINI with one profile and uploading to another host:
+
+```bash
+ANNA_INPUT_AWS_PROFILE=dini-reader \
+ANNA_OUTPUT_S3_PREFIX=s3://anna-forecasts/ \
+ANNA_OUTPUT_S3_ENDPOINT_URL=https://s3.example.org \
+ANNA_OUTPUT_AWS_PROFILE=forecast-writer \
+    uv run python -m anna_inference --analysis-time 2026-10-01T00:00Z
+```
 
 ### Running it
 

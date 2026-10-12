@@ -21,9 +21,11 @@
 #   CONTAINER_APP      podman (default) or docker
 #   IMAGE_NAME         image (default mlwp-inference-container-anna:latest)
 #
-# AWS credentials for reading DINI (and IFS) from S3 are passed at run time,
-# never baked into the image: AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY
-# (/AWS_SESSION_TOKEN) if set, and ~/.aws (read-only) with AWS_PROFILE.
+# AWS credentials for reading DINI (and IFS) from S3 and for the upload are
+# passed at run time, never baked into the image: AWS_ACCESS_KEY_ID/
+# AWS_SECRET_ACCESS_KEY (/AWS_SESSION_TOKEN) if set, and ~/.aws (read-only)
+# with AWS_PROFILE, or the per-side ANNA_{INPUT,OUTPUT}_AWS_PROFILE and
+# ANNA_{INPUT,OUTPUT}_S3_ENDPOINT_URL (see README.md).
 
 set -euo pipefail
 

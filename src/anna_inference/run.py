@@ -42,6 +42,11 @@ from anna_inference import envargs
 ENV_PREFIX = "ANNA"
 DEFAULT_DINI_ROOT = "s3://harmonie-zarr/dini/control/{analysis}/"
 BOUNDARY_SOURCES = ["dini", "ifs"]
+AWS_ENV_CREDENTIALS = [
+    "AWS_ACCESS_KEY_ID",
+    "AWS_SECRET_ACCESS_KEY",
+    "AWS_SESSION_TOKEN",
+]
 
 # as in create_inference_dataset.py (not imported, to keep --help fast): the
 # interior time step, and the shortest forecast neural-lam can load the model
@@ -145,6 +150,24 @@ def build_parser():
         "s3://anna-forecasts/2026-10-01T000000Z/), replacing an earlier "
         "upload for that analysis time",
     )
+    # S3 endpoint and credentials per side (input: DINI and IFS; output: the
+    # upload). Unset, the usual AWS configuration applies (AWS_* variables,
+    # ~/.aws)
+    for side, what in [
+        ("input", "reading DINI and IFS"),
+        ("output", "the upload"),
+    ]:
+        parser.add_argument(
+            f"--{side}-s3-endpoint-url",
+            help=f"S3 endpoint URL for {what} (default: from the AWS "
+            "configuration)",
+        )
+        parser.add_argument(
+            f"--{side}-aws-profile",
+            help=f"AWS profile (in ~/.aws) for {what}; overrides AWS_* "
+            "credentials in the environment (default: from the AWS "
+            "configuration)",
+        )
     parser.add_argument(
         "--debugger",
         choices=["ipdb"],
@@ -165,6 +188,13 @@ def parse_config(argv=None, environ=None):
     args, sources = envargs.parse_args(parser, ENV_PREFIX, argv, environ)
     if args.boundary_source == "ifs" and not args.ifs_boundary_path:
         parser.error("--boundary-source ifs needs --ifs-boundary-path")
+    if not args.output_s3_prefix and (
+        args.output_s3_endpoint_url or args.output_aws_profile
+    ):
+        parser.error(
+            "--output-s3-endpoint-url/--output-aws-profile need "
+            "--output-s3-prefix (nothing is uploaded without it)"
+        )
     if args.dini_root is None:
         compact = f"{args.analysis_time:%Y-%m-%dT%H%M%SZ}"
         args.dini_root = DEFAULT_DINI_ROOT.format(analysis=compact)
@@ -199,8 +229,35 @@ class Forecast:
             # read by the anna_inference steps
             self.env["ANNA_DEBUGGER"] = args.debugger
 
+    def step_env(self, side):
+        """
+        The environment of a step reading ("input") or writing ("output")
+        S3, with that side's endpoint and profile, which botocore reads
+        from AWS_ENDPOINT_URL_S3/AWS_ENDPOINT_URL and AWS_PROFILE.
+        """
+        env = dict(self.env)
+        endpoint_url = getattr(self.args, f"{side}_s3_endpoint_url")
+        profile = getattr(self.args, f"{side}_aws_profile")
+        if endpoint_url:
+            env["AWS_ENDPOINT_URL_S3"] = endpoint_url
+            env["AWS_ENDPOINT_URL"] = endpoint_url
+        if profile:
+            env["AWS_PROFILE"] = profile
+            # botocore prefers credentials in the environment over a profile
+            for name in AWS_ENV_CREDENTIALS:
+                env.pop(name, None)
+        return env
+
     def run_step(self, name, cmd, cwd=None, env=None):
         logger.info(f"{name}: {shlex.join(map(str, cmd))}")
+        if env is not None:
+            s3 = {
+                k: env[k]
+                for k in ["AWS_ENDPOINT_URL_S3", "AWS_PROFILE"]
+                if k in env and env[k] != self.env.get(k)
+            }
+            if s3:
+                logger.info(f"{name}: with {s3}")
         result = subprocess.run(
             [str(c) for c in cmd], cwd=cwd, env=env or self.env
         )
@@ -252,7 +309,7 @@ class Forecast:
         ]
         if self.args.boundary_source == "ifs":
             cmd.append("--no-boundary")
-        self.run_step("1. regrid DINI", cmd)
+        self.run_step("1. regrid DINI", cmd, env=self.step_env("input"))
         self.mark_completed(inputs)
 
     def create_datastores(self):
@@ -285,6 +342,8 @@ class Forecast:
                 "--workdir",
                 datastores,
             ],
+            # reads the IFS boundary
+            env=self.step_env("input"),
         )
         self.mark_completed(datastores)
 
@@ -400,6 +459,7 @@ class Forecast:
                 "--prefix",
                 self.args.output_s3_prefix,
             ],
+            env=self.step_env("output"),
         )
 
     def run(self):

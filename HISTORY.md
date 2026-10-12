@@ -107,6 +107,7 @@ Both used the same `7deg_config.yaml` datastores, so the DANRA interior statisti
   - `entry.sh` was replaced by a Python entrypoint, `python -m anna_inference` (`src/anna_inference/run.py`), with an argparse CLI. It runs the same steps as subprocesses.
   - Every option `--some-option` can also be set with `ANNA_SOME_OPTION`; the command line wins over the variable, which wins over the default. The mapping is `src/anna_inference/envargs.py`, which is generic (standard library only), so other containers can reuse it with their own prefix.
   - An unknown `ANNA_*` variable is an error (exit 2, with a "did you mean"). The run logs the effective configuration and where each value came from.
+  - The input (DINI, IFS) and output (upload) S3 sides each have an endpoint URL and an AWS profile option (`ANNA_{INPUT,OUTPUT}_{S3_ENDPOINT_URL,AWS_PROFILE}`, user, 2026-10-12). They're set per step as botocore's `AWS_ENDPOINT_URL_S3`/`AWS_PROFILE`, so the step modules are unchanged.
   - The old unprefixed variables (`ANALYSIS_TIME`, `INFERENCE_WORKDIR`, ...) are gone, with no compatibility shim. The build and run scripts' own variables lost the `ANNA_` prefix (`IMAGE_NAME`, `PULL_PROXY`), so they don't count as forecast options.
 
 ## Steps
