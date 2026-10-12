@@ -56,7 +56,7 @@ anna_inference = ["boundary/*.yaml"]
 
 [tool.setuptools_scm]
 # the version comes from the git tag (vX.Y.Z); a build without git (the
-# container build gets it as ANNA_VERSION, see the Containerfile) falls
+# container build gets it as IMAGE_VERSION, see the Containerfile) falls
 # back to this
 fallback_version = "0.0.0+unknown"
 # only `v*` tags are versions (e.g. not the artifact-* mirror release tags)

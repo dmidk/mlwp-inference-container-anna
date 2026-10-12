@@ -10,9 +10,11 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 ENV PATH="/root/.local/bin:$PATH"
 
 # the package version: the build context has no .git, so setuptools-scm
-# can't find the tag (build_image.sh and CI pass it)
-ARG ANNA_VERSION="0.0.0+unknown"
-LABEL org.opencontainers.image.version="${ANNA_VERSION}"
+# can't find the tag (build_image.sh and CI pass it). NB: build args are
+# environment variables in RUN steps, so none may start with ANNA_ (the
+# forecast's options, see the --help check below)
+ARG IMAGE_VERSION="0.0.0+unknown"
+LABEL org.opencontainers.image.version="${IMAGE_VERSION}"
 
 COPY pyproject.toml README.md ./
 COPY src/ ./src
@@ -20,7 +22,7 @@ COPY src/ ./src
 # export current torch version to constraints file
 RUN python -c 'import torch; print(f"torch=={torch.__version__}")' > constraints.txt
 # install with constraints
-RUN SETUPTOOLS_SCM_PRETEND_VERSION_FOR_ANNA_INFERENCE="${ANNA_VERSION}" \
+RUN SETUPTOOLS_SCM_PRETEND_VERSION_FOR_ANNA_INFERENCE="${IMAGE_VERSION}" \
     uv pip install --break-system-packages --system --constraints constraints.txt .
 # check that neural-lam imports (with the base image's torch), and show the
 # versions (neural-lam-dev has no __version__)

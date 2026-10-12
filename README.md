@@ -188,7 +188,7 @@ Tags `v*` pushed to the dmidk repository also publish it as
 
 The package version comes from the git tag (setuptools-scm, available as
 `anna_inference.__version__`); the build passes it to the Containerfile
-as `ANNA_VERSION`, since the build context has no `.git`. A release is:
+as `IMAGE_VERSION`, since the build context has no `.git`. A release is:
 add its section to [CHANGELOG.md](CHANGELOG.md), merge, then tag
 `vX.Y.Z` on dmidk `main`.
 

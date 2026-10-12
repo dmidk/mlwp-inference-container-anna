@@ -97,11 +97,11 @@ fi
 
 # The package version from the git tag (setuptools-scm); the build context
 # has no .git, so it's passed as a build arg
-if [ -z "$ANNA_VERSION" ]; then
-	ANNA_VERSION=$(uvx --from setuptools-scm python -m setuptools_scm 2>/dev/null)
-	ANNA_VERSION=${ANNA_VERSION:-0.0.0+unknown}
+if [ -z "$IMAGE_VERSION" ]; then
+	IMAGE_VERSION=$(uvx --from setuptools-scm python -m setuptools_scm 2>/dev/null)
+	IMAGE_VERSION=${IMAGE_VERSION:-0.0.0+unknown}
 fi
-echo "Info: anna-inference version $ANNA_VERSION"
+echo "Info: anna-inference version $IMAGE_VERSION"
 
 # Pull base image with proxy
 HTTP_PROXY="$PULL_PROXY" HTTPS_PROXY="$PULL_PROXY" ${CONTAINER_APP} --log-level="$BUILD_LOG_LEVEL" pull "$BASE_IMAGE"
@@ -110,7 +110,7 @@ HTTP_PROXY="$PULL_PROXY" HTTPS_PROXY="$PULL_PROXY" ${CONTAINER_APP} --log-level=
 echo "Running ${CONTAINER_APP} build to create image $IMAGE_NAME ..."
 ${CONTAINER_APP} build \
 	--build-arg BASE_IMAGE="$BASE_IMAGE" \
-	--build-arg ANNA_VERSION="$ANNA_VERSION" \
+	--build-arg IMAGE_VERSION="$IMAGE_VERSION" \
 	--build-arg ARTIFACT_SOURCE="$ARTIFACT_SOURCE" \
 	--build-arg PACKAGE_URL="$PACKAGE_URL" \
 	--build-arg PACKAGE_MD5="$PACKAGE_MD5" \
