@@ -24,7 +24,6 @@ Exit codes: 0 success, 2 configuration error, 1 a failed step.
 """
 import argparse
 import datetime
-import importlib.metadata
 import os
 import shlex
 import shutil
@@ -37,6 +36,7 @@ import isodate
 import yaml
 from loguru import logger
 
+import anna_inference
 from anna_inference import envargs
 
 ENV_PREFIX = "ANNA"
@@ -498,10 +498,7 @@ def log_device():
 
 
 def main(argv=None):
-    logger.info(
-        f"Starting anna-inference "
-        f"{importlib.metadata.version('anna-inference')}"
-    )
+    logger.info(f"Starting anna-inference {anna_inference.__version__}")
     # a local .env file (e.g. with S3 credentials, or ANNA_* variables);
     # variables already set win
     if Path(".env").is_file():

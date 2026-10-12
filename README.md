@@ -28,6 +28,8 @@ history, decisions and the reasons behind them are in
 `src/anna_inference/regrid_dini.py`, `inference-artifact/` is now
 `artifact/` and `src/anna_inference/artifact/`).
 
+Changes between releases are in [CHANGELOG.md](CHANGELOG.md).
+
 ## Model
 
 Described in [artifact/configs/model.yaml](artifact/configs/model.yaml)
@@ -177,6 +179,12 @@ the x86_64 image from the Zenodo package on every push and pull request.
 Tags `v*` pushed to the dmidk repository also publish it as
 `ghcr.io/dmidk/mlwp-inference-container-anna:<tag>` and `:latest`
 (forks only build).
+
+The package version comes from the git tag (setuptools-scm, available as
+`anna_inference.__version__`); the build passes it to the Containerfile
+as `ANNA_VERSION`, since the build context has no `.git`. A release is:
+add its section to [CHANGELOG.md](CHANGELOG.md), merge, then tag
+`vX.Y.Z` on dmidk `main`.
 
 ## Running a forecast
 
