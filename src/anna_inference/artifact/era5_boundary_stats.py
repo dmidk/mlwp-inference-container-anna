@@ -463,7 +463,7 @@ def main():
             "(arXiv:2504.09340), recomputed "
             "from WeatherBench2 ERA5 over the era_danra_model1_subset box with "
             "anna_inference.artifact.era5_boundary_stats "
-            "(https://github.com/leifdenby/mlwp-inference-container-anna)"
+            "(https://github.com/dmidk/mlwp-inference-container-anna)"
         ),
         source=args.source,
         split=SPLIT_NAME,

@@ -76,7 +76,7 @@ from anna_inference.artifact import (
 # the repository (the package is installed in editable mode for development)
 REPO_DIR = Path(__file__).resolve().parents[3]
 BUILD_DIR = REPO_DIR / "artifact" / "build"
-REPO_URL = "https://github.com/leifdenby/mlwp-inference-container-anna"
+REPO_URL = "https://github.com/dmidk/mlwp-inference-container-anna"
 
 BOUNDARY_DATASTORE_NAME = "era_7deg_model1_config"
 INTERIOR_DATASTORE_NAME = "danra_model1_config"

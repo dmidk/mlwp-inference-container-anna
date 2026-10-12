@@ -35,7 +35,7 @@ import yaml
 
 ZENODO = "https://zenodo.org"
 ZENODO_SANDBOX = "https://sandbox.zenodo.org"
-REPO_URL = "https://github.com/leifdenby/mlwp-inference-container-anna"
+REPO_URL = "https://github.com/dmidk/mlwp-inference-container-anna"
 
 CREATORS = [
     {
