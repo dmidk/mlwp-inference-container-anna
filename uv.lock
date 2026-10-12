@@ -227,7 +227,6 @@ wheels = [
 
 [[package]]
 name = "anna-inference"
-version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "cartopy" },

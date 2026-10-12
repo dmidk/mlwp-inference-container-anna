@@ -28,6 +28,8 @@ history, decisions and the reasons behind them are in
 `src/anna_inference/regrid_dini.py`, `inference-artifact/` is now
 `artifact/` and `src/anna_inference/artifact/`).
 
+Changes between releases are in [CHANGELOG.md](CHANGELOG.md).
+
 ## Model
 
 Described in [artifact/configs/model.yaml](artifact/configs/model.yaml)
@@ -169,7 +171,13 @@ The image is tagged `mlwp-inference-container-anna:latest` (`IMAGE_NAME`).
   `LOCAL_ARTIFACT_DIR` (default `artifact/build/anna-local`).
 
 In both cases the model checkpoint is downloaded from Zenodo during the build
-(md5-checked) if it isn't already there. No AWS credentials are needed. Set
+(md5-checked) if it isn't already there.
+
+If Zenodo is unavailable, both downloads fall back to copies (same md5s)
+in the GitHub release
+[artifact-anna-danra-2026-10-11](https://github.com/dmidk/mlwp-inference-container-anna/releases/tag/artifact-anna-danra-2026-10-11)
+(`PACKAGE_MIRROR_URL`, `CHECKPOINT_MIRROR_URL`; empty disables the
+fallback). No AWS credentials are needed. Set
 `PULL_PROXY` to pull the base image through DMI's proxy.
 
 CI ([container-image.yml](.github/workflows/container-image.yml)) builds
@@ -177,6 +185,12 @@ the x86_64 image from the Zenodo package on every push and pull request.
 Tags `v*` pushed to the dmidk repository also publish it as
 `ghcr.io/dmidk/mlwp-inference-container-anna:<tag>` and `:latest`
 (forks only build).
+
+The package version comes from the git tag (setuptools-scm, available as
+`anna_inference.__version__`); the build passes it to the Containerfile
+as `IMAGE_VERSION`, since the build context has no `.git`. A release is:
+add its section to [CHANGELOG.md](CHANGELOG.md), merge, then tag
+`vX.Y.Z` on dmidk `main`.
 
 ## Running a forecast
 

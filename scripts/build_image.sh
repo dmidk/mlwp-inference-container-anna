@@ -50,6 +50,11 @@ ARTIFACT_SOURCE=${ARTIFACT_SOURCE:-zenodo}
 # 10.5281/zenodo.23293148; built as artifact/build/anna-danra-2026-10-11.zip)
 PACKAGE_URL=${PACKAGE_URL:-https://zenodo.org/records/23293148/files/anna-danra-2026-10-11.zip?download=1}
 PACKAGE_MD5=${PACKAGE_MD5:-d453733a56c381d63922806cd4b25472}
+# copies of the package and the checkpoint (same md5s) in a dmidk GitHub
+# release, used if Zenodo is unavailable
+MIRROR=https://github.com/dmidk/mlwp-inference-container-anna/releases/download/artifact-anna-danra-2026-10-11
+PACKAGE_MIRROR_URL=${PACKAGE_MIRROR_URL:-$MIRROR/anna-danra-2026-10-11.zip}
+CHECKPOINT_MIRROR_URL=${CHECKPOINT_MIRROR_URL:-$MIRROR/danra_model.ckpt}
 
 if [ "$ARTIFACT_SOURCE" = "local" ]; then
 	# relative to the repository root (the build context)
@@ -69,11 +74,17 @@ elif [ "$ARTIFACT_SOURCE" = "zenodo" ]; then
 		exit 1
 	fi
 	# a Zenodo draft's files can't be downloaded until it's published
-	if ! curl -sfIL -o /dev/null "$PACKAGE_URL"; then
-		echo "Error: can't download the inference package from $PACKAGE_URL."
-		echo "Is the Zenodo record published? (Use ARTIFACT_SOURCE=local with a"
-		echo "locally assembled package until then.)"
-		exit 1
+	CURL_CHECK="curl -sfIL --connect-timeout 30 --retry 2 --retry-delay 10 --retry-all-errors -o /dev/null"
+	if ! $CURL_CHECK "$PACKAGE_URL"; then
+		if [ -n "$PACKAGE_MIRROR_URL" ] && $CURL_CHECK "$PACKAGE_MIRROR_URL"; then
+			echo "Warning: can't download $PACKAGE_URL, the build will use the"
+			echo "mirror $PACKAGE_MIRROR_URL."
+		else
+			echo "Error: can't download the inference package from $PACKAGE_URL"
+			echo "or its mirror. Is the Zenodo record published? (Use"
+			echo "ARTIFACT_SOURCE=local with a locally assembled package until then.)"
+			exit 1
+		fi
 	fi
 	# the Containerfile always copies LOCAL_ARTIFACT_DIR: an empty directory,
 	# so no local package (or checkpoint) ends up in an image layer
@@ -84,6 +95,14 @@ else
 	exit 1
 fi
 
+# The package version from the git tag (setuptools-scm); the build context
+# has no .git, so it's passed as a build arg
+if [ -z "$IMAGE_VERSION" ]; then
+	IMAGE_VERSION=$(uvx --from setuptools-scm python -m setuptools_scm 2>/dev/null)
+	IMAGE_VERSION=${IMAGE_VERSION:-0.0.0+unknown}
+fi
+echo "Info: anna-inference version $IMAGE_VERSION"
+
 # Pull base image with proxy
 HTTP_PROXY="$PULL_PROXY" HTTPS_PROXY="$PULL_PROXY" ${CONTAINER_APP} --log-level="$BUILD_LOG_LEVEL" pull "$BASE_IMAGE"
 
@@ -91,9 +110,12 @@ HTTP_PROXY="$PULL_PROXY" HTTPS_PROXY="$PULL_PROXY" ${CONTAINER_APP} --log-level=
 echo "Running ${CONTAINER_APP} build to create image $IMAGE_NAME ..."
 ${CONTAINER_APP} build \
 	--build-arg BASE_IMAGE="$BASE_IMAGE" \
+	--build-arg IMAGE_VERSION="$IMAGE_VERSION" \
 	--build-arg ARTIFACT_SOURCE="$ARTIFACT_SOURCE" \
 	--build-arg PACKAGE_URL="$PACKAGE_URL" \
 	--build-arg PACKAGE_MD5="$PACKAGE_MD5" \
+	--build-arg PACKAGE_MIRROR_URL="$PACKAGE_MIRROR_URL" \
+	--build-arg CHECKPOINT_MIRROR_URL="$CHECKPOINT_MIRROR_URL" \
 	--build-arg LOCAL_ARTIFACT_DIR="$LOCAL_ARTIFACT_DIR" \
 	-t "$IMAGE_NAME" \
 	-f Containerfile \

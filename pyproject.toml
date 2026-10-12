@@ -1,6 +1,6 @@
 [project]
 name = "anna-inference"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Inference for ANNA, the DANRA ML limited-area weather model (arXiv:2504.09340), run from DINI forecasts, and the container image that runs it"
 readme = "README.md"
 license = "MIT"
@@ -54,6 +54,17 @@ where = ["src"]
 # the operational (DINI/IFS) boundary datastore configs
 anna_inference = ["boundary/*.yaml"]
 
+[tool.setuptools_scm]
+# the version comes from the git tag (vX.Y.Z); a build without git (the
+# container build gets it as IMAGE_VERSION, see the Containerfile) falls
+# back to this
+fallback_version = "0.0.0+unknown"
+# only `v*` tags are versions (e.g. not the artifact-* mirror release tags)
+tag_regex = "^v(?P<version>\\d+(?:\\.\\d+)*.*)$"
+
+[tool.setuptools_scm.scm.git]
+describe_command = "git describe --dirty --tags --long --abbrev=40 --match v[0-9]*"
+
 [tool.isort]
 profile = "black"
 # as black in .pre-commit-config.yaml (the black profile assumes 88)
@@ -61,6 +72,12 @@ line_length = 79
 known_first_party = ["anna_inference"]
 
 [tool.uv]
+# rebuild the (editable) install when the commit or tags change, so the
+# version from setuptools-scm stays current
+cache-keys = [
+    { file = "pyproject.toml" },
+    { git = { commit = true, tags = true } },
+]
 # Use exactly the mllam-data-prep ANNA was trained with:
 # sadamov/mllam-data-prep@building-ml-lams (mdp 0.5.0 based, adds domain
 # cropping and `lead_time` for derived variables). neural-lam-dev depends on the
@@ -80,5 +97,5 @@ override-dependencies = [
 neural-lam = { git = "https://github.com/joeloskarsson/neural-lam-dev", rev = "a44d432e" }
 
 [build-system]
-requires = ["setuptools>=77"]
+requires = ["setuptools>=77", "setuptools-scm>=9"]
 build-backend = "setuptools.build_meta"
