@@ -51,14 +51,26 @@ jobs:
         name: Prepare the build context
         # The Containerfile always copies LOCAL_ARTIFACT_DIR: an empty
         # directory with ARTIFACT_SOURCE=zenodo. Check that the package can
-        # be downloaded, which it can't while the Zenodo record is a draft.
+        # be downloaded from Zenodo (not while the record is a draft) or its
+        # GitHub release mirror.
         run: |
           mkdir -p artifact/build/.empty
-          url=$(sed -n 's/^ARG PACKAGE_URL="\(.*\)"$/\1/p' Containerfile)
-          if ! curl -sfIL --retry 5 --retry-delay 10 --retry-all-errors -o /dev/null "$url"; then
-            echo "::error::can't download the inference package $url" \
-              "(is the Zenodo record published?)"
-            exit 1
+          arg() { sed -n "s/^ARG $1=\"\(.*\)\"$/\1/p" Containerfile; }
+          url=$(arg PACKAGE_URL)
+          mirror=$(arg PACKAGE_MIRROR_URL)
+          check() {
+            curl -sfIL --connect-timeout 30 --retry 2 --retry-delay 10 \
+              --retry-all-errors -o /dev/null "$1"
+          }
+          if ! check "$url"; then
+            if check "$mirror"; then
+              echo "::warning::can't download $url, the build uses the" \
+                "mirror $mirror"
+            else
+              echo "::error::can't download the inference package $url" \
+                "or its mirror $mirror (is the Zenodo record published?)"
+              exit 1
+            fi
           fi
 
       - &version

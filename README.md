@@ -171,7 +171,13 @@ The image is tagged `mlwp-inference-container-anna:latest` (`IMAGE_NAME`).
   `LOCAL_ARTIFACT_DIR` (default `artifact/build/anna-local`).
 
 In both cases the model checkpoint is downloaded from Zenodo during the build
-(md5-checked) if it isn't already there. No AWS credentials are needed. Set
+(md5-checked) if it isn't already there.
+
+If Zenodo is unavailable, both downloads fall back to copies (same md5s)
+in the GitHub release
+[artifact-anna-danra-2026-10-11](https://github.com/dmidk/mlwp-inference-container-anna/releases/tag/artifact-anna-danra-2026-10-11)
+(`PACKAGE_MIRROR_URL`, `CHECKPOINT_MIRROR_URL`; empty disables the
+fallback). No AWS credentials are needed. Set
 `PULL_PROXY` to pull the base image through DMI's proxy.
 
 CI ([container-image.yml](.github/workflows/container-image.yml)) builds

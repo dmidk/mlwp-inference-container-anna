@@ -2,10 +2,12 @@
 Download the model checkpoint described in an inference artifact's
 `configs/model.yaml` into the artifact directory, and check its md5.
 
-Does nothing if the checkpoint is already there with the right md5.
+Does nothing if the checkpoint is already there with the right md5. If the
+download fails (e.g. Zenodo is down), the mirrors are tried in order.
 
 Usage:
-    python -m anna_inference.fetch_checkpoint <artifact_dir>
+    python -m anna_inference.fetch_checkpoint <artifact_dir> \
+        [--mirror-url <url>]...
 """
 import argparse
 import hashlib
@@ -27,18 +29,25 @@ def _md5(fp):
     return md5.hexdigest()
 
 
-def _download(url, fp, attempts=5, wait=10):
+def _download(url, fp, attempts=3, wait=10, timeout=60):
     """
     Download `url` to `fp`, retrying (with a growing wait) on network
     errors and server errors (e.g. a Zenodo 504), but not client errors
     """
     for attempt in range(1, attempts + 1):
         try:
-            with urllib.request.urlopen(url) as response, open(fp, "wb") as fh:
+            with urllib.request.urlopen(
+                url, timeout=timeout
+            ) as response, open(fp, "wb") as fh:
                 for chunk in iter(lambda: response.read(2**20), b""):
                     fh.write(chunk)
             return
-        except (urllib.error.URLError, http.client.HTTPException) as ex:
+        except (
+            urllib.error.URLError,
+            TimeoutError,
+            ConnectionError,
+            http.client.HTTPException,
+        ) as ex:
             client_error = (
                 isinstance(ex, urllib.error.HTTPError) and ex.code < 500
             )
@@ -51,7 +60,7 @@ def _download(url, fp, attempts=5, wait=10):
             time.sleep(wait * attempt)
 
 
-def fetch_checkpoint(artifact_dir):
+def fetch_checkpoint(artifact_dir, mirror_urls=()):
     artifact_dir = Path(artifact_dir)
     try:  # use the OS trust store (e.g. behind a TLS-inspecting proxy)
         import truststore
@@ -70,24 +79,42 @@ def fetch_checkpoint(artifact_dir):
         return fp
 
     fp_tmp = fp.with_name(fp.name + ".tmp")
-    logger.info(f"downloading {ckpt['url']} to {fp}")
-    _download(ckpt["url"], fp_tmp)
-    md5 = _md5(fp_tmp)
-    if md5 != ckpt["md5"]:
-        fp_tmp.unlink()
-        raise ValueError(
-            f"md5 of downloaded checkpoint {md5} != {ckpt['md5']}"
-        )
-    fp_tmp.replace(fp)
-    logger.info(f"checkpoint downloaded and verified: {fp}")
-    return fp
+    urls = [ckpt["url"], *mirror_urls]
+    for i, url in enumerate(urls):
+        logger.info(f"downloading {url} to {fp}")
+        try:
+            _download(url, fp_tmp)
+            md5 = _md5(fp_tmp)
+            if md5 != ckpt["md5"]:
+                fp_tmp.unlink()
+                raise ValueError(
+                    f"md5 of downloaded checkpoint {md5} != {ckpt['md5']}"
+                )
+        except (OSError, http.client.HTTPException, ValueError) as ex:
+            if i == len(urls) - 1:
+                raise
+            logger.warning(
+                f"download from {url} failed ({ex}), trying the "
+                f"next mirror"
+            )
+            continue
+        fp_tmp.replace(fp)
+        logger.info(f"checkpoint downloaded and verified: {fp}")
+        return fp
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("artifact_dir", type=Path)
+    parser.add_argument(
+        "--mirror-url",
+        action="append",
+        default=[],
+        help="a mirror of the checkpoint, tried (in order) if the download "
+        "from model.yaml's url fails (repeatable)",
+    )
     args = parser.parse_args()
-    fetch_checkpoint(args.artifact_dir)
+    fetch_checkpoint(args.artifact_dir, mirror_urls=args.mirror_url)
 
 
 if __name__ == "__main__":

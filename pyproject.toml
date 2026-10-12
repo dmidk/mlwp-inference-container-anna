@@ -59,6 +59,11 @@ anna_inference = ["boundary/*.yaml"]
 # container build gets it as ANNA_VERSION, see the Containerfile) falls
 # back to this
 fallback_version = "0.0.0+unknown"
+# only `v*` tags are versions (e.g. not the artifact-* mirror release tags)
+tag_regex = "^v(?P<version>\\d+(?:\\.\\d+)*.*)$"
+
+[tool.setuptools_scm.scm.git]
+describe_command = "git describe --dirty --tags --long --abbrev=40 --match v[0-9]*"
 
 [tool.isort]
 profile = "black"
@@ -92,5 +97,5 @@ override-dependencies = [
 neural-lam = { git = "https://github.com/joeloskarsson/neural-lam-dev", rev = "a44d432e" }
 
 [build-system]
-requires = ["setuptools>=77", "setuptools-scm>=8"]
+requires = ["setuptools>=77", "setuptools-scm>=9"]
 build-backend = "setuptools.build_meta"

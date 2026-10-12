@@ -37,7 +37,10 @@ published on Zenodo
 - CI: pytest, pre-commit, the image build on every push and pull request,
   and publishing to `ghcr.io/dmidk/mlwp-inference-container-anna` for `v*`
   tags.
-- The package version comes from the git tag (setuptools-scm) and is
-  available as `anna_inference.__version__`.
+- The package version comes from the git tag (setuptools-scm, `v*` tags
+  only) and is available as `anna_inference.__version__`.
+- The Zenodo downloads (inference package and checkpoint) retry on
+  server and network errors, then fall back to the copies in the GitHub
+  release [artifact-anna-danra-2026-10-11](https://github.com/dmidk/mlwp-inference-container-anna/releases/tag/artifact-anna-danra-2026-10-11).
 
 [v0.1.0]: https://github.com/dmidk/mlwp-inference-container-anna/releases/tag/v0.1.0

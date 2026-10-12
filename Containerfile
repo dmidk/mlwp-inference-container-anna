@@ -34,9 +34,13 @@ RUN python -c 'import importlib.metadata as md, anna_inference, neural_lam, torc
 #   build context
 # The model checkpoint is then downloaded (md5-checked) from Zenodo as given in
 # inference_artifact/configs/model.yaml, unless it's already there.
+# If Zenodo is unavailable, both downloads fall back to the copies in the
+# dmidk GitHub release artifact-anna-danra-2026-10-11 (same md5s).
 ARG ARTIFACT_SOURCE="zenodo"
 ARG PACKAGE_URL="https://zenodo.org/records/23293148/files/anna-danra-2026-10-11.zip?download=1"
 ARG PACKAGE_MD5="d453733a56c381d63922806cd4b25472"
+ARG PACKAGE_MIRROR_URL="https://github.com/dmidk/mlwp-inference-container-anna/releases/download/artifact-anna-danra-2026-10-11/anna-danra-2026-10-11.zip"
+ARG CHECKPOINT_MIRROR_URL="https://github.com/dmidk/mlwp-inference-container-anna/releases/download/artifact-anna-danra-2026-10-11/danra_model.ckpt"
 ARG LOCAL_ARTIFACT_DIR="artifact/build/.empty"
 # ${LOCAL_ARTIFACT_DIR} must exist in the build context: build_image.sh
 # creates an empty one for ARTIFACT_SOURCE=zenodo (so no local package ends
@@ -47,15 +51,24 @@ RUN if [ "$ARTIFACT_SOURCE" = "local" ] ; then \
     elif [ "$ARTIFACT_SOURCE" = "zenodo" ] ; then \
         rm -rf /workspace/inference_artifact_local && \
         test -n "$PACKAGE_URL" && test -n "$PACKAGE_MD5" && \
-        curl -fL --retry 5 --retry-delay 10 --retry-all-errors -o inference_artifact.zip "$PACKAGE_URL" && \
-        echo "$PACKAGE_MD5  inference_artifact.zip" | md5sum -c - && \
+        for url in "$PACKAGE_URL" "$PACKAGE_MIRROR_URL" ; do \
+            [ -n "$url" ] || continue ; \
+            if curl -fL --connect-timeout 30 --retry 2 --retry-delay 10 --retry-all-errors \
+                    -o inference_artifact.zip "$url" && \
+                echo "$PACKAGE_MD5  inference_artifact.zip" | md5sum -c - ; then \
+                downloaded=1 ; break ; \
+            fi ; \
+            echo "download from $url failed, trying the next mirror" ; \
+        done && \
+        test -n "$downloaded" && \
         mkdir -p /workspace/inference_artifact && \
         unzip inference_artifact.zip -d /workspace/inference_artifact && \
         rm inference_artifact.zip ; \
     else \
         echo "unknown ARTIFACT_SOURCE=$ARTIFACT_SOURCE (local or zenodo)" && exit 1 ; \
     fi
-RUN python -m anna_inference.fetch_checkpoint /workspace/inference_artifact
+RUN python -m anna_inference.fetch_checkpoint /workspace/inference_artifact \
+        ${CHECKPOINT_MIRROR_URL:+--mirror-url "$CHECKPOINT_MIRROR_URL"}
 # List files in the inference artifact directory for verification
 RUN ls -la /workspace/inference_artifact
 
