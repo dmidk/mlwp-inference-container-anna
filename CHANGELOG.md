@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The forecast no longer downloads Natural Earth coastlines and borders
+  for neural-lam's spatial error maps, which needs internet access the
+  Airflow dev server doesn't have. The image includes them
+  (`CARTOPY_DATA_DIR`).
+  [\#10](https://github.com/dmidk/mlwp-inference-container-anna/pull/10),
+  @observingClouds
+
 ## [v0.1.1]
 
 Bug fix release addressing DINI boundary prep issues
