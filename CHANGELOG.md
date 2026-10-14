@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   [\#7](https://github.com/dmidk/mlwp-inference-container-anna/issues/7),
   @observingClouds
 
+## [v0.1.1]
+
+Bug fix release addressing DINI boundary prep issues
+
 ### Fixed
 
 - Creating the inference datastores with a DINI boundary no longer fails
@@ -65,5 +69,6 @@ published on Zenodo
   server and network errors, then fall back to the copies in the GitHub
   release [artifact-anna-danra-2026-10-11](https://github.com/dmidk/mlwp-inference-container-anna/releases/tag/artifact-anna-danra-2026-10-11).
 
-[Unreleased]: https://github.com/dmidk/mlwp-inference-container-anna/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/dmidk/mlwp-inference-container-anna/compare/v0.1.1...HEAD
+[v0.1.1]: https://github.com/dmidk/mlwp-inference-container-anna/compare/v0.1.0...v0.1.1
 [v0.1.0]: https://github.com/dmidk/mlwp-inference-container-anna/releases/tag/v0.1.0
