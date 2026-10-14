@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- CI runs for pull requests and pushes to main, no longer for pushes to
+  every branch, which ran every workflow twice for each commit of a pull
+  request. A newer push cancels the running workflows of its branch or pull
+  request, and the image only builds when something going into it changed
+  (`v*` tags always build).
+  [\#7](https://github.com/dmidk/mlwp-inference-container-anna/issues/7),
+  @observingClouds
+- A release builds the image once: the job that builds it also pushes it for
+  `v*` tags, where a separate publish job built it a second time.
+  [\#9](https://github.com/dmidk/mlwp-inference-container-anna/issues/9),
+  @observingClouds
+
 ### Fixed
 
 - The forecast no longer downloads Natural Earth coastlines and borders
