@@ -182,10 +182,6 @@ def boundary_to_valid_time(ds, analysis_time, forecast_duration):
         [ds_valid, ds.drop_vars(time_dependent + ["time"], errors="ignore")],
         combine_attrs="override",
     )
-    # loaded: on a boundary opened from zarr, selecting the padded (repeated)
-    # times splits `time` into uneven dask chunks (e.g. 2, 2, 3 from stored
-    # chunks of 3), which can't be written back to zarr. It is small, a few
-    # boundary times on the boundary box
     ds_valid = ds_valid.drop_vars("prediction_timedelta", errors="ignore")
     ds_valid = ds_valid.load()
     padded = [t for t in required if t < used[0] or t > used[-1]]
