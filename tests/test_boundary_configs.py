@@ -406,6 +406,26 @@ def test_boundary_to_valid_time_older_cycle():
     )
 
 
+def test_boundary_to_valid_time_from_zarr(tmp_path):
+    # as in operation: the boundary opened from a zarr store with its lead
+    # times in chunks of 3 (as zarr picks for regrid_dini's boundary box).
+    # The padded times must not leave uneven chunks, which zarr can't store
+    ds = _make_forecast_contract_dataset(
+        analysis_time="2026-10-01T06:00", lead_hours=[0, 6, 12, 18, 24]
+    )
+    fp = tmp_path / "boundary.zarr"
+    ds.chunk(prediction_timedelta=3).to_zarr(fp)
+    ds_valid = boundary_to_valid_time(
+        xr.open_zarr(fp), _dt("2026-10-01T06:00"), _hours(18)
+    )
+    fp_valid = tmp_path / "boundary_valid.zarr"
+    ds_valid.to_zarr(fp_valid)
+    xr.testing.assert_equal(xr.open_zarr(fp_valid), ds_valid)
+    assert ds_valid.attrs["boundary_times_padded"] == (
+        "2026-10-01T00:00, 2026-10-02T12:00"
+    )
+
+
 def test_boundary_to_valid_time_missing():
     # DINI boundary from the 03Z run: no data at 00Z, which a 03Z forecast
     # needs
