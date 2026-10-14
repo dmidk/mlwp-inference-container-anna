@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [v0.1.1]
 
-Bug fix release: forecasts with a DINI boundary run again.
+Bug fix release addressing DINI boundary prep issues
 
 ### Fixed
 
