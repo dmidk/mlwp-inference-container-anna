@@ -183,6 +183,7 @@ def boundary_to_valid_time(ds, analysis_time, forecast_duration):
         combine_attrs="override",
     )
     ds_valid = ds_valid.drop_vars("prediction_timedelta", errors="ignore")
+    ds_valid = ds_valid.load()
     padded = [t for t in required if t < used[0] or t > used[-1]]
     ds_valid.attrs.update(
         boundary_cycle=str(cycle)[:19],

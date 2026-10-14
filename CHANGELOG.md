@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- Creating the inference datastores with a DINI boundary no longer fails
+  writing the boundary in valid-time layout ("Final chunk of Zarr array must
+  be the same size or smaller than the first"): `boundary_to_valid_time`
+  loads its result, as selecting the padded boundary times left uneven dask
+  chunks.
+  [\#3](https://github.com/dmidk/mlwp-inference-container-anna/issues/3),
+  @observingClouds
+
 ## [v0.1.0]
 
 First release of the operational inference container for ANNA, the DANRA
@@ -43,4 +55,5 @@ published on Zenodo
   server and network errors, then fall back to the copies in the GitHub
   release [artifact-anna-danra-2026-10-11](https://github.com/dmidk/mlwp-inference-container-anna/releases/tag/artifact-anna-danra-2026-10-11).
 
+[Unreleased]: https://github.com/dmidk/mlwp-inference-container-anna/compare/v0.1.0...HEAD
 [v0.1.0]: https://github.com/dmidk/mlwp-inference-container-anna/releases/tag/v0.1.0
