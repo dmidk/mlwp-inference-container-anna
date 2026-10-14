@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`v*` tags always build).
   [\#7](https://github.com/dmidk/mlwp-inference-container-anna/issues/7),
   @observingClouds
+- A release builds the image once: the job that builds it also pushes it for
+  `v*` tags, where a separate publish job built it a second time.
+  [\#9](https://github.com/dmidk/mlwp-inference-container-anna/issues/9),
+  @observingClouds
 
 ## [v0.1.1]
 
