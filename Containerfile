@@ -28,6 +28,18 @@ RUN SETUPTOOLS_SCM_PRETEND_VERSION_FOR_ANNA_INFERENCE="${IMAGE_VERSION}" \
 # versions (neural-lam-dev has no __version__)
 RUN python -c 'import importlib.metadata as md, anna_inference, neural_lam, torch; print("anna-inference", anna_inference.__version__, "neural-lam", md.version("neural-lam"), "torch", torch.__version__)'
 
+# Natural Earth coastlines and borders for the spatial error maps neural-lam
+# plots at the end of the forecast (neural_lam/vis.py). cartopy would
+# download them then, but the forecast may run without internet access
+# (Airflow). cartopy picks the border scale from the map extent, so all
+# three scales are included.
+ENV CARTOPY_DATA_DIR=/usr/local/share/cartopy
+RUN python -c 'import cartopy, cartopy.io.shapereader as shp; \
+    cartopy.config["data_dir"] = cartopy.config["pre_existing_data_dir"]; \
+    [print(shp.natural_earth(scale, category, name)) \
+     for category, name in [("physical", "coastline"), ("cultural", "admin_0_boundary_lines_land")] \
+     for scale in ["110m", "50m", "10m"]]'
+
 # The inference artifact (configs, statistics, grids, model description, see
 # artifact/README.md) comes from:
 # - "zenodo" (default): the published inference package ${PACKAGE_URL},

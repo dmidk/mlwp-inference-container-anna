@@ -171,7 +171,9 @@ The image is tagged `mlwp-inference-container-anna:latest` (`IMAGE_NAME`).
   `LOCAL_ARTIFACT_DIR` (default `artifact/build/anna-local`).
 
 In both cases the model checkpoint is downloaded from Zenodo during the build
-(md5-checked) if it isn't already there.
+(md5-checked) if it isn't already there. The build also downloads the
+Natural Earth coastlines and borders for neural-lam's plots into
+`CARTOPY_DATA_DIR`, so the forecast doesn't download them.
 
 If Zenodo is unavailable, both downloads fall back to copies (same md5s)
 in the GitHub release
