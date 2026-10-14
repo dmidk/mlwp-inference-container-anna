@@ -181,9 +181,11 @@ fallback). No AWS credentials are needed. Set
 `PULL_PROXY` to pull the base image through DMI's proxy.
 
 CI ([container-image.yml](.github/workflows/container-image.yml)) builds
-the x86_64 image from the Zenodo package on every push and pull request.
-Tags `v*` pushed to the dmidk repository also publish it as
-`ghcr.io/dmidk/mlwp-inference-container-anna:<tag>` and `:latest`
+the x86_64 image from the Zenodo package for pull requests and pushes to
+main that change something going into the image (`Containerfile`,
+`.dockerignore`, `pyproject.toml`, `README.md`, `src/` or the workflow).
+Tags `v*` pushed to the dmidk repository always build, and also publish
+it as `ghcr.io/dmidk/mlwp-inference-container-anna:<tag>` and `:latest`
 (forks only build).
 
 The package version comes from the git tag (setuptools-scm, available as

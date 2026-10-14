@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- CI runs for pull requests and pushes to main, no longer for pushes to
+  every branch, which ran every workflow twice for each commit of a pull
+  request. A newer push cancels the running workflows of its branch or pull
+  request, and the image only builds when something going into it changed
+  (`v*` tags always build).
+  [\#7](https://github.com/dmidk/mlwp-inference-container-anna/issues/7),
+  @observingClouds
+
 ### Fixed
 
 - Creating the inference datastores with a DINI boundary no longer fails

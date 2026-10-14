@@ -1,5 +1,11 @@
-# Build the inference image (x86_64) on every push and pull request, and
-# publish it to ghcr.io for `v*` tags (as `<tag>` and `latest`).
+# Build the inference image (x86_64) for pull requests and pushes to main,
+# and publish it to ghcr.io for `v*` tags (as `<tag>` and `latest`).
+#
+# Pushes to other branches don't build: a branch with a pull request is
+# built by the pull_request run, and building on every push as well built
+# each commit twice. Pull requests and main only build when something that
+# goes into the image changed. GitHub doesn't apply path filters to tag
+# pushes, so a release tag always builds.
 #
 # The inference package comes from Zenodo record 23293148 (the PACKAGE_URL
 # and PACKAGE_MD5 defaults in the Containerfile, also in
@@ -10,11 +16,24 @@ name: Build Container
 on:
   push:
     branches:
-      - "**"
+      - main
     tags:
       - "v*"
+    paths: &image-paths
+      - Containerfile
+      - .dockerignore
+      - pyproject.toml
+      - README.md  # the package's readme, copied into the image
+      - "src/**"
+      - .github/workflows/container-image.yml
   pull_request:
+    paths: *image-paths
   workflow_dispatch:
+
+# a newer push to the same branch or pull request cancels the running build
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
