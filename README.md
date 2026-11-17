@@ -89,8 +89,8 @@ features from other forecasts.
 
 | File | What |
 |---|---|
-| `ifs_7deg_model1_config.yaml` | operational IFS boundary. **Its header is the contract for the IFS GRIB → zarr conversion**: variables, units, dims, lead times, and the 0.25° box lat 40.0–72.0, lon −27.0–39.5 (the east edge must be exactly 39.5°E) |
-| `dini_7deg_model1_config.yaml` | DINI boundary, in the same layout as IFS |
+| `ifs_7deg_model1_config.yaml` | operational IFS boundary. **Its header is the contract for the IFS GRIB → zarr conversion**: variables, units, dims, lead times, and the area lat 40.0–72.0, lon −27.0–39.5 plus a margin for the smoothing (e.g. lon −27.3–39.8 at 0.1°). `anna_inference.regrid_ifs` regrids it to the 0.25° box (the east edge must be exactly 39.5°E) |
+| `dini_7deg_model1_config.yaml` | DINI boundary, in the same layout as the regridded IFS |
 
 For a forecast, `anna_inference.model_configs.inference_neural_lam_config`
 derives the neural-lam config from the training one. It keeps the same model
@@ -200,7 +200,8 @@ the whole pipeline, each step as a subprocess:
 
 1. `anna_inference.regrid_dini`: DINI → DANRA grid (interior) and, for the
    DINI boundary, → the 0.25° ERA5 boundary box. Reads DINI concurrently
-   with dask
+   with dask. For the IFS boundary, `anna_inference.regrid_ifs`: IFS → the
+   same box
 2. `anna_inference.create_inference_dataset`: inference datastores and
    neural-lam config
 3. `neural_lam.build_rectangular_graph`: the model's graph (`model.yaml`)
