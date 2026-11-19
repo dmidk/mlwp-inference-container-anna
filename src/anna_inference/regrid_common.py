@@ -8,12 +8,12 @@ from loguru import logger
 
 LEVELS = [100, 200, 400, 600, 700, 850, 925, 1000]  # hPa, as used by ANNA
 
-# ERA5 (WeatherBench2) 0.25 deg box covering the boundary points ANNA was
-# trained with (lat 40.50..71.50, lon -26.25..39.50), as in the contract in
-# anna_inference/boundary/ifs_7deg_model1_config.yaml. The east edge must be
-# exactly 39.5E, the edge of the training ERA5 subset: the cropping margin
-# reaches further east, so a wider box would add boundary points not used in
-# training
+# ERA5 (WeatherBench2) 0.25 deg bounding box covering the boundary points
+# ANNA was trained with (lat 40.50..71.50, lon -26.25..39.50), as in the
+# contract in anna_inference/boundary/ifs_7deg_model1_config.yaml. The east
+# edge must be exactly 39.5E, the edge of the training ERA5 subset: the
+# cropping margin reaches further east, so a wider bounding box would add
+# boundary points not used in training
 BOUNDARY_LATS = np.arange(72.0, 40.0 - 0.125, -0.25)
 BOUNDARY_LONS = np.arange(-27.0, 39.5 + 0.125, 0.25)
 

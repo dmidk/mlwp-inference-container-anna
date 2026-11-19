@@ -6,8 +6,8 @@ expects:
   names and conventions, written as `{output}/interior_single_levels.zarr` and
   `{output}/interior_pressure_levels.zarr` (read through the
   `danra_model1_config` datastore config)
-- boundary: a regular 0.25 deg lat/lon box with ERA5 (WeatherBench2) variable
-  names and conventions, following the contract in
+- boundary: a regular 0.25 deg lat/lon bounding box with ERA5 (WeatherBench2)
+  variable names and conventions, following the contract in
   `anna_inference/boundary/ifs_7deg_model1_config.yaml`, written as
   `{output}/boundary.zarr`
   (read through the `dini_7deg_model1_config` datastore config)
@@ -28,7 +28,7 @@ Conventions (checked against the data, see INFERENCE_PLAN.md step 4):
 
 Interpolation is bilinear in DINI's own projection (from the `crs_wkt` stored
 with the DINI data); target points outside the DINI domain are handled with
-`--outside-domain` (the boundary box extends north of DINI).
+`--outside-domain` (the bounding box extends north of DINI).
 
 Usage:
     # once: cache the DANRA grid and statics
@@ -289,9 +289,9 @@ def _regrid_interior(
 
 def smooth(field, n_cells):
     """
-    Box average over n_cells x n_cells grid cells (edges: nearest value), to
-    bring km-scale DINI fields to the scale of the 0.25 deg ERA5 grid before
-    sampling them there. Point samples of 2 km fields keep small-scale
+    Moving average over n_cells x n_cells grid cells (edges: nearest value),
+    to bring km-scale DINI fields to the scale of the 0.25 deg ERA5 grid
+    before sampling them there. Point samples of 2 km fields keep small-scale
     variability (e.g. vertical velocity over orography) that 0.25 deg ERA5
     doesn't have.
 
@@ -335,7 +335,7 @@ def _regrid_boundary(
     interp = BilinearInterpolator(
         ds_sl.x.values, ds_sl.y.values, x_tgt, y_tgt, outside=outside
     )
-    # odd number of cells so the box average is centred
+    # odd number of cells so the moving average is centred
     n_cells = (
         2 * int(round(smoothing_km / DINI_DX_KM / 2)) + 1
         if smoothing_km > 0
@@ -498,7 +498,7 @@ def regrid(
         ds_b.attrs = dict(
             source=str(dini_root),
             description=(
-                "DINI regridded to the ERA5 0.25 deg boundary box in the IFS "
+                "DINI regridded to the ERA5 0.25 deg bounding box in the IFS "
                 "boundary contract layout (regrid_dini.py)"
             ),
             n_points_outside_dini_filled_nearest=interp.n_outside,
@@ -558,8 +558,8 @@ def main():
         type=float,
         default=25.0,
         help=(
-            "box-average DINI over this scale before sampling the 0.25 deg "
-            "boundary (0: off)"
+            "smooth DINI with a moving average over this scale before "
+            "sampling the 0.25 deg boundary (0: off)"
         ),
     )
     args = parser.parse_args()

@@ -9,14 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- The IFS boundary is regridded to the 0.25 deg ERA5 boundary box, as the
-  DINI one: `anna_inference.regrid_ifs` box-averages the IFS forecast (as
-  nwp-forecast-zarr-creator writes it, on its 0.1 deg grid) over 25 km
-  (`--boundary-smoothing-km`) and samples it bilinearly, for the cycle,
-  levels and lead times the forecast uses. It runs in step 1 with
-  `--boundary-source ifs`. The IFS zarr must reach far enough beyond the box
-  for the smoothing (e.g. lon -27.3..39.8 at 0.1 deg), and needs 600 hPa
-  (not in nwp-forecast-zarr-creator v0.10.0).
+- The IFS boundary is regridded to the 0.25 deg ERA5 bounding box of the
+  boundary, as the DINI one: `anna_inference.regrid_ifs` smooths the IFS
+  forecast (as nwp-forecast-zarr-creator writes it, on its 0.1 deg grid)
+  with a 25 km moving average (`--boundary-smoothing-km`) and samples it
+  bilinearly, for the cycle, levels and lead times the forecast uses. It
+  runs in step 1 with `--boundary-source ifs`. The IFS zarr must reach far
+  enough beyond the bounding box for the moving average (e.g. lon -27.3..39.8
+  at 0.1 deg), and needs 600 hPa (not in nwp-forecast-zarr-creator v0.10.0).
 
 ### Fixed
 

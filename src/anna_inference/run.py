@@ -9,8 +9,8 @@ repository, with `--artifact-path artifact/build/<artifact-name>`.
 
 Steps (see HISTORY.md), each run as a subprocess:
   1. regrid DINI to the DANRA grid (interior) and, for the DINI boundary,
-     to the 0.25 deg ERA5 boundary box     (anna_inference.regrid_dini);
-     for the IFS boundary, regrid IFS to that box
+     to the 0.25 deg ERA5 bounding box     (anna_inference.regrid_dini);
+     for the IFS boundary, regrid IFS to that bounding box
                                            (anna_inference.regrid_ifs)
   2. create the inference datastores and neural-lam config
                                    (anna_inference.create_inference_dataset)

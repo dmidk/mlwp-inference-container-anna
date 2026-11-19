@@ -188,7 +188,7 @@ def _write_ifs(path, lon_min, lon_max, fields=True):
 
 
 def test_regrid(tmp_path):
-    # clipped wide enough for the 25 km smoothing box (see
+    # clipped wide enough for the 25 km moving average (see
     # test_regrid_clip_too_narrow)
     ifs = _write_ifs(tmp_path / "ifs.zarr", -27.3, 39.8)
     ri.regrid(ifs, ANALYSIS_TIME, DURATION, tmp_path / "inputs")
@@ -229,8 +229,8 @@ def test_regrid(tmp_path):
 
 
 def test_regrid_clip_too_narrow(tmp_path):
-    # clipped to the boundary box (with one grid point beyond it): enough
-    # for the bilinear interpolation, not for the 25 km smoothing box, which
+    # clipped to the bounding box (with one grid point beyond it): enough
+    # for the bilinear interpolation, not for the 25 km moving average, which
     # needs 1 grid point beyond it along latitude and up to 3 (7 cells at
     # 72N) along longitude
     ifs = _write_ifs(tmp_path / "ifs.zarr", -27.0, 39.5, fields=False)
@@ -240,7 +240,7 @@ def test_regrid_clip_too_narrow(tmp_path):
     ri.regrid(ifs, ANALYSIS_TIME, DURATION, tmp_path / "inputs", 0.0)
 
 
-def test_regrid_box_not_covered(tmp_path):
+def test_regrid_bounding_box_not_covered(tmp_path):
     ifs = _write_ifs(tmp_path / "ifs.zarr", -27.3, 30.0, fields=False)
     with pytest.raises(ValueError, match="outside the source grid"):
         ri.regrid(ifs, ANALYSIS_TIME, DURATION, tmp_path / "inputs", 0.0)

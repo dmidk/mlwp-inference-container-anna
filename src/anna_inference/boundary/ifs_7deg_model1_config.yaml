@@ -34,7 +34,7 @@
 # One zarr store per IFS cycle (e.g.
 # `.../ifs-dini/{YYYY-MM-DDTHHMMSSZ}/ifs.zarr`, written by
 # nwp-forecast-zarr-creator) containing the variables below, on a regular
-# lat/lon grid. ANNA regrids it to the 0.25 deg boundary box
+# lat/lon grid. ANNA regrids it to the 0.25 deg bounding box
 # (`anna_inference.regrid_ifs`, written as `inputs/boundary.zarr`) and turns
 # that into the valid-time input of this config (see above):
 #
@@ -54,24 +54,26 @@
 #   latitude, longitude   1D, a regular lat/lon grid (e.g. IFS's 0.1 deg,
 #                         latitudes in either direction, longitudes in
 #                         -180..180) covering lat 40.0..72.0 and
-#                         lon -27.0..39.5 with a margin for the smoothing box
-#                         of `regrid_ifs`, which fails otherwise
+#                         lon -27.0..39.5 with a margin for the moving
+#                         average of `regrid_ifs`, which fails otherwise
 #                         (`check_smoothing_margin`): at 0.1 deg and 25 km,
-#                         1 grid point beyond the box along latitude and 3
-#                         along longitude, e.g. clipped to lon -27.3..39.8.
+#                         1 grid point beyond the bounding box along
+#                         latitude and 3 along longitude, e.g. clipped to
+#                         lon -27.3..39.8.
 #                         `regrid_ifs` regrids it to the regular 0.25 deg
 #                         grid on the ERA5 grid points (multiples of
-#                         0.25 deg) of that box. The 18014 boundary points
-#                         ANNA was trained with span lat 40.50..71.50,
+#                         0.25 deg) of that bounding box. The 18014 boundary
+#                         points ANNA was trained with span lat 40.50..71.50,
 #                         lon -26.25..39.50 (recovered from the checkpoint).
 #                         The EAST EDGE MUST BE EXACTLY 39.5E (the edge of the
 #                         ERA5 subset used in training): the 7.19 deg cropping
-#                         margin reaches further east, so a wider box adds 49
-#                         boundary points ANNA wasn't trained with. The other
-#                         edges have a 0.5 deg margin. NB: the cropping margin
-#                         is a great-circle distance, so the ring is much
-#                         wider in longitude than in latitude. Coordinate
-#                         names must be exactly `latitude` and `longitude`.
+#                         margin reaches further east, so a wider bounding
+#                         box adds 49 boundary points ANNA wasn't trained
+#                         with. The other edges have a 0.5 deg margin. NB:
+#                         the cropping margin is a great-circle distance, so
+#                         the ring is much wider in longitude than in
+#                         latitude. Coordinate names must be exactly
+#                         `latitude` and `longitude`.
 #   level                 pressure level in hPa, must include
 #                         100, 200, 400, 600, 700, 850, 925, 1000.
 #                         If a `units` attribute is set it must be exactly
