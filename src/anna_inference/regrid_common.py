@@ -21,8 +21,9 @@ BOUNDARY_LONS = np.arange(-27.0, 39.5 + 0.125, 0.25)
 class BilinearInterpolator:
     """
     Bilinear interpolation from a regular (y, x) grid to arbitrary target
-    points given in the same projected coordinates. Weights are computed once
-    and applied to any number of fields.
+    points given in the same coordinates as the source grid (e.g. projected
+    x/y, or lon/lat). Weights are computed once and applied to any number of
+    fields.
     """
 
     def __init__(self, x_src, y_src, x_tgt, y_tgt, outside="error"):
@@ -45,7 +46,8 @@ class BilinearInterpolator:
             if outside == "error":
                 raise ValueError(msg)
             logger.warning(
-                f"{msg}, filling with the nearest source grid point"
+                f"{msg}, filling with the nearest point on the edge of the "
+                "source grid"
             )
         fi = np.clip(fi, 0, x_src.size - 1)
         fj = np.clip(fj, 0, y_src.size - 1)
