@@ -202,6 +202,7 @@ def regrid(
             .astype("f4")
             .assign_attrs(ds[v].attrs)
             for v in ds.data_vars
+            if {"y", "x"} <= set(ds[v].dims)
         },
         coords=dict(
             latitude=("latitude", BOUNDARY_LATS),

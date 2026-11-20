@@ -181,6 +181,12 @@ def _write_ifs(path, lon_min, lon_max, fields=True):
             _truth(la, lo).astype("f4"),
             {"units": "1"},
         )
+        # the grid mapping, a scalar without the grid's dims
+        ds["latitude_longitude"] = (
+            (),
+            0,
+            {"grid_mapping_name": "latitude_longitude"},
+        )
     ds.chunk(time=1, prediction_timedelta=1, level=1).to_zarr(
         path, consolidated=True
     )
