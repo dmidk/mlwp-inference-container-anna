@@ -9,7 +9,9 @@ repository, with `--artifact-path artifact/build/<artifact-name>`.
 
 Steps (see HISTORY.md), each run as a subprocess:
   1. regrid DINI to the DANRA grid (interior) and, for the DINI boundary,
-     to the 0.25 deg ERA5 boundary box     (anna_inference.regrid_dini)
+     to the 0.25 deg ERA5 bounding box     (anna_inference.regrid_dini);
+     for the IFS boundary, regrid IFS to that bounding box
+                                           (anna_inference.regrid_ifs)
   2. create the inference datastores and neural-lam config
                                    (anna_inference.create_inference_dataset)
   3. build the model's graph               (neural_lam.build_rectangular_graph)
@@ -310,6 +312,24 @@ class Forecast:
         if self.args.boundary_source == "ifs":
             cmd.append("--no-boundary")
         self.run_step("1. regrid DINI", cmd, env=self.step_env("input"))
+        if self.args.boundary_source == "ifs":
+            self.run_step(
+                "1. regrid IFS",
+                [
+                    sys.executable,
+                    "-m",
+                    "anna_inference.regrid_ifs",
+                    "--ifs-path",
+                    self.args.ifs_boundary_path,
+                    "--analysis-time",
+                    self.analysis_iso,
+                    "--forecast-duration",
+                    self.duration_iso,
+                    "--output",
+                    inputs,
+                ],
+                env=self.step_env("input"),
+            )
         self.mark_completed(inputs)
 
     def create_datastores(self):
@@ -317,10 +337,6 @@ class Forecast:
         if self.completed(datastores, "the inference datastores"):
             return
         (datastores / ".completed").unlink(missing_ok=True)
-        if self.args.boundary_source == "dini":
-            boundary = self.workdir / "inputs" / "boundary.zarr"
-        else:
-            boundary = self.args.ifs_boundary_path
         self.run_step(
             "2. inference datastores",
             [
@@ -332,7 +348,7 @@ class Forecast:
                 "--interior-dir",
                 self.workdir / "inputs",
                 "--boundary",
-                boundary,
+                self.workdir / "inputs" / "boundary.zarr",
                 "--boundary-source",
                 self.args.boundary_source,
                 "--analysis-time",
@@ -342,8 +358,6 @@ class Forecast:
                 "--workdir",
                 datastores,
             ],
-            # reads the IFS boundary
-            env=self.step_env("input"),
         )
         self.mark_completed(datastores)
 

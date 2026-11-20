@@ -134,3 +134,49 @@ def test_output_options_need_a_prefix(artifact, name):
     with pytest.raises(SystemExit) as ex:
         run.parse_config(argv, environ)
     assert ex.value.code == 2
+
+
+@pytest.mark.parametrize("source", ["dini", "ifs"])
+def test_boundary_regridded_to_the_inputs(artifact, tmp_path, source):
+    """
+    Step 1 regrids the boundary to inputs/boundary.zarr, the IFS one with
+    regrid_ifs, and step 2 reads it from there.
+    """
+    argv = [
+        "--analysis-time", "2026-10-01T06:00",
+        "--boundary-source", source,
+        "--ifs-boundary-path", "s3://bucket/ifs.zarr",
+        "--artifact-path", str(artifact),
+        "--workdir", str(tmp_path / "work"),
+    ]  # fmt: skip
+    _, args, _ = run.parse_config(argv, {})
+    forecast = run.Forecast(args)
+    steps = []
+    forecast.run_step = lambda name, cmd, **kwargs: steps.append(
+        (name, [str(c) for c in cmd])
+    )
+    inputs = args.workdir / "inputs"
+    # created by the steps, which don't run here
+    inputs.mkdir(parents=True)
+    (args.workdir / "datastores").mkdir()
+    forecast.regrid()
+    forecast.create_datastores()
+
+    names = [name for name, _ in steps]
+    if source == "dini":
+        assert names == ["1. regrid DINI", "2. inference datastores"]
+        assert "--no-boundary" not in steps[0][1]
+    else:
+        assert names == [
+            "1. regrid DINI", "1. regrid IFS", "2. inference datastores"
+        ]  # fmt: skip
+        assert "--no-boundary" in steps[0][1]
+        assert steps[1][1][1:] == [
+            "-m", "anna_inference.regrid_ifs",
+            "--ifs-path", "s3://bucket/ifs.zarr",
+            "--analysis-time", "2026-10-01T06:00",
+            "--forecast-duration", "PT18H",
+            "--output", str(inputs),
+        ]  # fmt: skip
+    cmd = steps[-1][1]
+    assert cmd[cmd.index("--boundary") + 1] == str(inputs / "boundary.zarr")
