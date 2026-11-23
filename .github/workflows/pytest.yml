@@ -26,8 +26,6 @@ jobs:
 
       - uses: astral-sh/setup-uv@v6
         with:
-          # as the container image; uv.lock's numcodecs 0.15.1 has no Python
-          # 3.14 wheel, and its source doesn't compile with gcc 15 (C23)
           python-version: "3.12"
 
       - name: Install the locked environment

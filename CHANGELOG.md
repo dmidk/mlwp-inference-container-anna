@@ -16,6 +16,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   [\#10](https://github.com/dmidk/mlwp-inference-container-anna/pull/10),
   @observingClouds
 
+- The pytest CI job runs on Python 3.12, the Python of the container
+  image, instead of the runner's default (3.14), for which
+  `uv sync --frozen` failed building numcodecs from source.
+  [\#14](https://github.com/dmidk/mlwp-inference-container-anna/pull/14),
+  @luca-schmidt
+
 ## [v0.1.1]
 
 Bug fix release addressing DINI boundary prep issues
