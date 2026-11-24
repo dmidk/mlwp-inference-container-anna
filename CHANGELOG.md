@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   runs in step 1 with `--boundary-source ifs`. The IFS zarr must reach far
   enough beyond the bounding box for the moving average (e.g. lon -27.3..39.8
   at 0.1 deg), and needs 600 hPa (not in nwp-forecast-zarr-creator v0.10.0).
+  [\#12](https://github.com/dmidk/mlwp-inference-container-anna/pull/12),
+  @luca-schmidt
 
 ### Fixed
 
