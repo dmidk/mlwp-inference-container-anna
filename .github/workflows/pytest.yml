@@ -25,6 +25,8 @@ jobs:
           large-packages: false
 
       - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
 
       - name: Install the locked environment
         run: uv sync --frozen
