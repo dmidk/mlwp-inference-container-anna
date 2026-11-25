@@ -20,6 +20,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   [\#12](https://github.com/dmidk/mlwp-inference-container-anna/pull/12),
   @luca-schmidt
 
+### Changed
+
+- The container image installs all dependencies, torch included, from
+  `uv.lock`, the versions the pytest CI job tests, on a plain CUDA base
+  image (`nvidia/cuda:13.0.3-base-ubuntu24.04`, for x86_64 and ARM). Before,
+  torch came from the PyTorch base image (2.10.0) and the other packages
+  were resolved at build time. The image now has torch 2.14.1.
+  [\#15](https://github.com/dmidk/mlwp-inference-container-anna/pull/15),
+  @luca-schmidt
+
 ### Fixed
 
 - The forecast no longer downloads Natural Earth coastlines and borders

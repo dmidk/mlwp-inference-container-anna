@@ -1,4 +1,4 @@
-ARG BASE_IMAGE="pytorch/pytorch:2.10.0-cuda13.0-cudnn9-runtime"
+ARG BASE_IMAGE="nvidia/cuda:13.0.3-base-ubuntu24.04"
 FROM ${BASE_IMAGE}
 
 WORKDIR /workspace
@@ -7,7 +7,19 @@ RUN apt-get update && apt-get install -y curl unzip git
 
 # Install uv
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-ENV PATH="/root/.local/bin:$PATH"
+# the environment from uv.lock goes to /opt/venv, with uv's Python in
+# /opt/python: not under /root, as run_inference_container.sh runs the image
+# as the calling user, and not in /workspace, which the dev container mounts
+# over
+ENV UV_PROJECT_ENVIRONMENT=/opt/venv \
+    UV_PYTHON_INSTALL_DIR=/opt/python \
+    PATH="/opt/venv/bin:/root/.local/bin:$PATH"
+
+# the dependencies as locked in uv.lock (what CI tests), torch included. They
+# are installed before the code is copied, so a code change doesn't reinstall
+# them
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev --no-install-project --managed-python --python 3.12
 
 # the package version: the build context has no .git, so setuptools-scm
 # can't find the tag (build_image.sh and CI pass it). NB: build args are
@@ -16,16 +28,13 @@ ENV PATH="/root/.local/bin:$PATH"
 ARG IMAGE_VERSION="0.0.0+unknown"
 LABEL org.opencontainers.image.version="${IMAGE_VERSION}"
 
-COPY pyproject.toml README.md ./
+COPY README.md ./
 COPY src/ ./src
 
-# export current torch version to constraints file
-RUN python -c 'import torch; print(f"torch=={torch.__version__}")' > constraints.txt
-# install with constraints
 RUN SETUPTOOLS_SCM_PRETEND_VERSION_FOR_ANNA_INFERENCE="${IMAGE_VERSION}" \
-    uv pip install --break-system-packages --system --constraints constraints.txt .
-# check that neural-lam imports (with the base image's torch), and show the
-# versions (neural-lam-dev has no __version__)
+    uv sync --frozen --no-dev --no-editable --managed-python --python 3.12
+# check that neural-lam imports, and show the versions (neural-lam-dev has no
+# __version__)
 RUN python -c 'import importlib.metadata as md, anna_inference, neural_lam, torch; print("anna-inference", anna_inference.__version__, "neural-lam", md.version("neural-lam"), "torch", torch.__version__)'
 
 ENV CARTOPY_DATA_DIR=/usr/local/share/cartopy
