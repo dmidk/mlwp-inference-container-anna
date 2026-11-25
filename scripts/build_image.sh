@@ -25,18 +25,9 @@ else
     CR_URL="dockerhub.dmi.dk"
 fi
 
-# if we're on ARM architecture, use the ARM base image
-if [ "$(uname -m)" = "aarch64" ]; then
-	echo "Info: Detected ARM architecture. Using ARM base image."
-	# dockerhub doesn't have an official pytorch image for ARM, so we use NVIDIA's NGC registry
-	if [ -z "$CR_URL" ] || [ "$CR_URL" = "docker.io" ]; then
-		CR_URL="nvcr.io"
-	fi
-	BASE_IMAGE="${CR_URL}/nvidia/pytorch:26.01-py3"
-else
-	echo "Info: Using x86_64 base image."
-	BASE_IMAGE="${CR_URL}/pytorch/pytorch:2.10.0-cuda13.0-cudnn9-runtime"
-fi
+# the base image (nvidia/cuda has x86_64 and ARM variants, the container app
+# pulls the one for this machine)
+BASE_IMAGE="${CR_URL}/nvidia/cuda:13.0.3-base-ubuntu24.04"
 
 # Where the inference artifact comes from (see Containerfile):
 # - "zenodo" (default) downloads the published inference package
